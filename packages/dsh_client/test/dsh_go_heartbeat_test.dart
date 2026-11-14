@@ -18,6 +18,7 @@ void main() {
       clock.elapse(const Duration(seconds: 5)); // 30 s since the last text.
       await h.drainProbeIfSent();
       clock.elapse(const Duration(seconds: 30));
+      await h.drainProbeIfSent();
 
       expect(h.stream.subscriptionCount, 1);
       expect(h.stream.link, DshGoLink.open);
