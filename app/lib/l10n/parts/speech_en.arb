@@ -2,7 +2,7 @@
   "speechReadAloud": "Read aloud",
   "speechReadAloudStop": "Stop reading",
   "speechReadSection": "Read aloud",
-  "speechReadFooter": "Used by the read-aloud key under replies, the companion room and voice calls.",
+  "speechReadFooter": "Used by the read-aloud key under replies and voice calls.",
   "speechVoiceTitle": "Reading voice",
   "speechVoiceHello": "Hello, this is the reading voice.",
   "speechVoiceDeepseek": "DeepSeek",

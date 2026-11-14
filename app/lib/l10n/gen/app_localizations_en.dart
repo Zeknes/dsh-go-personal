@@ -18444,7 +18444,7 @@ class L10nEn extends L10n {
   String get speechReadSection => 'Read aloud';
 
   @override
-  String get speechReadFooter => 'Used by the read-aloud key under replies, the companion room and voice calls.';
+  String get speechReadFooter => 'Used by the read-aloud key under replies and voice calls.';
 
   @override
   String get speechVoiceTitle => 'Reading voice';
@@ -24248,7 +24248,7 @@ class L10nEn extends L10n {
 
   @override
   String get usageStatsFooter =>
-      'This switch controls dsh-go’s own statistics: feature counts (tavern messages, companion room visits and voice calls included), the token counts model replies report, versions, phone maker and model, and system version. It includes no chats, character cards, files or accounts, and does not control Google ML Kit SDK statistics.';
+      'This switch controls dsh-go’s own statistics: feature counts (including voice calls), the token counts model replies report, versions, phone maker and model, and system version. It includes no chats, files or accounts, and does not control Google ML Kit SDK statistics.';
 
   @override
   String get usageNoticeBody => 'No chats or personal info.\nTurn off anytime.';

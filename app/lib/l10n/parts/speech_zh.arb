@@ -2,7 +2,7 @@
   "speechReadAloud": "朗读",
   "speechReadAloudStop": "停止朗读",
   "speechReadSection": "朗读",
-  "speechReadFooter": "回复下方的朗读键、伙伴小屋和语音通话都用这个声音。",
+  "speechReadFooter": "回复下方的朗读键和语音通话都用这个声音。",
   "speechVoiceTitle": "朗读的声音",
   "speechVoiceHello": "你好，这是朗读的声音。",
   "speechVoiceDeepseek": "DeepSeek",
