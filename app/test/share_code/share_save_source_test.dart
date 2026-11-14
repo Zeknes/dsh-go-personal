@@ -59,7 +59,7 @@ void main() {
       goldenApp(
         brightness: Brightness.light,
         home: Scaffold(
-          body: ShareCodePanel(key: ValueKey(name), payload: payload(name), title: name),
+          body: ShareCodePanel(key: ValueKey(name), payload: payload(name)),
         ),
         overrides: [shareOutProvider.overrideWithValue(out)],
       ),

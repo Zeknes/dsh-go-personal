@@ -7,12 +7,9 @@ import '../../share_code/share_models.dart';
 import 'share_out.dart';
 
 class ShareCodePanel extends ConsumerStatefulWidget {
-  const ShareCodePanel({super.key, required this.payload, required this.title, this.onImage, this.webLink});
+  const ShareCodePanel({super.key, required this.payload});
 
   final SharePayload payload;
-  final String title;
-  final VoidCallback? onImage;
-  final String? webLink;
 
   @override
   ConsumerState<ShareCodePanel> createState() => _ShareCodePanelState();

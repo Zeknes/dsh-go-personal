@@ -1,13 +1,4 @@
-// The share panel's pages: the first one (what to share, then where it goes),
-// 「链接」 and 「文件」. 「图片」 is share_image_page.dart; 「选中消息」 the message
-// picker. docs/design/share-redesign.md §4.
-//
-//   分享
-//   (( 这条回复 )  选中消息   整段对话 )
-//   (✓ 思考过程) (✓ 工具调用) (✓ 图片)
-//   [ card ]
-//   ⛨ 2 条消息 · 3 次工具调用 · 密钥已隐藏          调整
-//     (链接)    (图片)    (文件)    (文字)
+// Local conversation and artifact export pages.
 
 import 'dart:async';
 

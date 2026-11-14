@@ -137,7 +137,7 @@ class _PluginShareSheetState extends ConsumerState<PluginShareSheet> {
           const SizedBox(height: 24),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: kSheetGutter),
-            child: ShareCodePanel(payload: _payload, title: p.displayTitle),
+            child: ShareCodePanel(payload: _payload),
           ),
           const SizedBox(height: 20),
         ],

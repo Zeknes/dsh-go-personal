@@ -278,7 +278,7 @@ class ProfileSharePreview extends StatelessWidget {
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(kSheetGutter, 12, kSheetGutter, 20),
-            child: ShareCodePanel(payload: share, title: share.name ?? title),
+            child: ShareCodePanel(payload: share),
           ),
         ),
       ],

@@ -216,7 +216,7 @@ void main() {
     expect(find.text('完成（2）'), findsOneWidget, reason: 'the last exchange to start with');
   });
 
-  testWidgets('privacy reaches the file, the link and the text alike', (tester) async {
+  testWidgets('privacy reaches the file and text alike', (tester) async {
     final panel = await _open(tester, state: _fixture(), reply: 'a6', scope: ShareScope.whole);
 
     await _key(tester, 'share-to-file');
@@ -268,7 +268,7 @@ void main() {
 
   // ── 链接 ──────────────────────────────────────────────────────────────────
 
-  testWidgets('文件: a DSH Go file, a web page, Markdown; 预览 opens the replay', (tester) async {
+  testWidgets('文件: conversation backup, offline HTML and Markdown', (tester) async {
     final panel = await _open(tester, state: _fixture(), reply: 'a6', scope: ShareScope.whole);
     await _key(tester, 'share-to-file');
     expect(find.text('修复登录重复提交.dshgo'), findsOneWidget);
@@ -302,7 +302,7 @@ void main() {
     expect(find.byKey(const ValueKey('share-preview-replay')), findsNothing);
   });
 
-  testWidgets('over the limit: the file and the link say so and nothing goes out; Markdown still does', (tester) async {
+  testWidgets('over the limit: the file is blocked while Markdown remains available', (tester) async {
     final random = Random(7);
     const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
     final noise = String.fromCharCodes(List.generate(5200000, (_) => alphabet.codeUnitAt(random.nextInt(64))));
