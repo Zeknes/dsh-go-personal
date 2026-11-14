@@ -44,9 +44,8 @@ final livePushProvider = Provider<LivePush>((ref) {
   );
 });
 
-/// Watch it to keep the live activity fed (with the pet overlay's bridge, in
-/// both 原生 and 网页 modes). Equal pushes are not sent twice.
-final liveActivityBridgeProvider = Provider<void>((ref) {
+/// Keep live activity updates active while a home is mounted.
+final liveActivityBridgeProvider = Provider.autoDispose<void>((ref) {
   ref.listen<LivePush>(livePushProvider, (previous, next) {
     if (previous == next) return;
     unawaited(ref.read(notifyChannelProvider).live(next));

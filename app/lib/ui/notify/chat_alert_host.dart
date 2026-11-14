@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/connection_state.dart';
 import '../../state/hosts_state.dart';
+import '../../state/live_activity_state.dart';
 import '../../state/notify_state.dart';
 import '../bots/bot_alerts.dart';
 import '../common/discard_guard.dart';
@@ -101,6 +102,7 @@ class _ChatAlertHostState extends ConsumerState<ChatAlertHost> {
     if (native) {
       // Keeps the controller (and its host subscriptions) alive with the shell.
       ref.watch(chatAlertsProvider.select((_) => null));
+      ref.watch(liveActivityBridgeProvider);
       _activate();
     }
     return widget.child ?? const SizedBox.shrink();
