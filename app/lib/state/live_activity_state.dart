@@ -69,7 +69,7 @@ final liveActivityProvider = Provider<LiveActivity?>((ref) {
       : TaskStateName.thinking;
   final prefs = ref.watch(notifyPrefsProvider);
   return liveActivityOf(
-    pet: TaskState(state: state, target: target, foreground: foreground),
+    task: TaskState(state: state, target: target, foreground: foreground),
     runs: runs,
     pending: pending,
     focus: focus,

@@ -3,17 +3,8 @@
 // top of the shade, the lock screen — and HyperOS, ColorOS and MagicOS draw in
 // their islands.
 //
-// What it says is the pet's mood (pet_mood.dart) put into words, from the same
-// reducer, so the island and the pet never disagree; it shows the pet's own
-// picture for that state. Phone control is added natively and outranks this.
-//
-// | 宠物状态 | 实时活动 |
-// |---|---|
-// | thinking / working / juggling / sweeping | running: the clock in the chip |
-// | notification | waiting: 「待确认」/「待回答」 |
-// | attention | done: 「完成」 for the pet's moment, app in the background only |
-// | error | failed: 「出错」, same |
-// | anything else | running while something runs, else nothing |
+// Host task and alert state supplies the status; phone control is added
+// natively and takes precedence.
 
 import 'package:flutter/foundation.dart';
 
@@ -50,7 +41,7 @@ class LiveActivity {
   /// The lock screen's line when it hides sensitive content.
   final String publicText;
 
-  /// The pet state whose picture goes with it.
+  /// The activity's status for the native notification.
   final TaskStateName mood;
 
   /// When the run started: the chip counts up from it.
@@ -94,13 +85,13 @@ class LiveActivity {
   String toString() => 'LiveActivity(${kind.name} "$title" · $text)';
 }
 
-/// What the live activity shows for [pet] (the global pet state); null: nothing.
+/// What the live activity shows for the current task state; null: nothing.
 ///
 /// [titles] holds the titles of conversations seen running (unmasked), so a
 /// finished one keeps its name for its moment. [showDone] / [showFailed]
 /// follow the 「一轮完成」 / 「出错或被停下」 notification switches.
 LiveActivity? liveActivityOf({
-  required TaskState pet,
+  required TaskState task,
   required List<TaskRun> runs,
   required List<TaskPending> pending,
   TaskFocus? focus,
@@ -111,7 +102,7 @@ LiveActivity? liveActivityOf({
   final l10n = appL10n;
   final roots = {for (final r in runs) TaskTarget(r.host, r.root)};
   final running = roots.isNotEmpty;
-  final target = pet.target ?? pending.firstOrNull?.target ?? (running ? roots.first : null);
+  final target = task.target ?? pending.firstOrNull?.target ?? (running ? roots.first : null);
   if (target == null) return null;
 
   DateTime? started(TaskTarget t) {
@@ -148,7 +139,7 @@ LiveActivity? liveActivityOf({
     text: text,
     chip: chip,
     publicText: publicText,
-    mood: pet.state,
+    mood: task.state,
     since: kind == LiveKind.running || kind == LiveKind.waiting ? started(target) : null,
     target: target,
     eventId: eventId,
@@ -176,7 +167,7 @@ LiveActivity? liveActivityOf({
     );
   }
 
-  switch (pet.state) {
+  switch (task.state) {
     case TaskStateName.notification:
       final request = pending.where((p) => p.target == target).firstOrNull ?? pending.firstOrNull;
       final question = request?.question ?? false;
@@ -187,12 +178,12 @@ LiveActivity? liveActivityOf({
         l10n.livePublicWaiting,
         eventId: request?.key,
       );
-    case TaskStateName.attention when !pet.foreground && showDone:
+    case TaskStateName.attention when !task.foreground && showDone:
       return make(LiveKind.done, l10n.statePetDone, l10n.liveChipDone, l10n.livePublicDone);
-    case TaskStateName.error when !pet.foreground && showFailed:
+    case TaskStateName.error when !task.foreground && showFailed:
       return make(LiveKind.failed, l10n.statePetFailed, l10n.liveChipFailed, l10n.livePublicFailed);
     case TaskStateName.thinking || TaskStateName.working || TaskStateName.juggling || TaskStateName.sweeping:
-      return runningAs(pet.state);
+      return runningAs(task.state);
     default:
       return runningAs(TaskStateName.thinking);
   }

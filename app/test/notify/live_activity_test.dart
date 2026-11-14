@@ -28,10 +28,10 @@ void main() {
   const a = TaskTarget(_local, 'a');
 
   test('nothing runs and nothing waits: nothing to show', () {
-    expect(liveActivityOf(pet: _pet(TaskStateName.idle), runs: const [], pending: const []), isNull);
+    expect(liveActivityOf(task: _pet(TaskStateName.idle), runs: const [], pending: const []), isNull);
     expect(
       liveActivityOf(
-        pet: _pet(TaskStateName.sleeping, target: a),
+        task: _pet(TaskStateName.sleeping, target: a),
         runs: const [],
         pending: const [],
       ),
@@ -41,7 +41,7 @@ void main() {
 
   test('a run names its conversation and counts from its start', () {
     final live = liveActivityOf(
-      pet: _pet(TaskStateName.working, target: a),
+      task: _pet(TaskStateName.working, target: a),
       runs: [
         _run('a', at: 5, title: '修登录页'),
         _run('sub', root: 'a', subagent: true, at: 2),
@@ -61,7 +61,7 @@ void main() {
 
   test('other conversations running are counted, across hosts', () {
     final live = liveActivityOf(
-      pet: _pet(TaskStateName.thinking, target: a),
+      task: _pet(TaskStateName.thinking, target: a),
       runs: [
         _run('a', title: 'A'),
         _run('b'),
@@ -74,13 +74,13 @@ void main() {
 
   test('titles are masked, and an untitled one says so', () {
     final secret = liveActivityOf(
-      pet: _pet(TaskStateName.working, target: a),
+      task: _pet(TaskStateName.working, target: a),
       runs: [_run('a', title: '部署 sk-abcdefghijklmnopqrstuvwxyz0123')],
       pending: const [],
     )!;
     expect(secret.title, isNot(contains('qrstuvwxyz0123')));
     final untitled = liveActivityOf(
-      pet: _pet(TaskStateName.working, target: a),
+      task: _pet(TaskStateName.working, target: a),
       runs: [_run('a')],
       pending: const [],
     )!;
@@ -89,7 +89,7 @@ void main() {
 
   test('a waiting request says which kind and carries its event', () {
     final approval = liveActivityOf(
-      pet: _pet(TaskStateName.notification, target: a),
+      task: _pet(TaskStateName.notification, target: a),
       runs: [_run('a', title: 'A')],
       pending: [const TaskPending(host: _local, sessionId: 'a', key: 'e1')],
     )!;
@@ -100,7 +100,7 @@ void main() {
     expect(approval.since, _t0);
 
     final question = liveActivityOf(
-      pet: _pet(TaskStateName.notification, target: a),
+      task: _pet(TaskStateName.notification, target: a),
       runs: [_run('a', title: 'A')],
       pending: [const TaskPending(host: _local, sessionId: 'a', key: 'q1', question: true)],
     )!;
@@ -111,7 +111,7 @@ void main() {
   test('done and failed show only while the app is away, and only when their notifications are on', () {
     final titles = {a: '修登录页'};
     final done = liveActivityOf(
-      pet: _pet(TaskStateName.attention, target: a),
+      task: _pet(TaskStateName.attention, target: a),
       runs: const [],
       pending: const [],
       titles: titles,
@@ -122,7 +122,7 @@ void main() {
     expect(done.since, isNull);
 
     final failed = liveActivityOf(
-      pet: _pet(TaskStateName.error, target: a),
+      task: _pet(TaskStateName.error, target: a),
       runs: const [],
       pending: const [],
       titles: titles,
@@ -131,7 +131,7 @@ void main() {
 
     expect(
       liveActivityOf(
-        pet: _pet(TaskStateName.attention, target: a, foreground: true),
+        task: _pet(TaskStateName.attention, target: a, foreground: true),
         runs: const [],
         pending: const [],
       ),
@@ -139,7 +139,7 @@ void main() {
     );
     expect(
       liveActivityOf(
-        pet: _pet(TaskStateName.attention, target: a),
+        task: _pet(TaskStateName.attention, target: a),
         runs: const [],
         pending: const [],
         showDone: false,
@@ -148,7 +148,7 @@ void main() {
     );
     // Another conversation still runs: back to that.
     final other = liveActivityOf(
-      pet: _pet(TaskStateName.attention, target: a, foreground: true),
+      task: _pet(TaskStateName.attention, target: a, foreground: true),
       runs: [_run('b', title: 'B')],
       pending: const [],
     )!;
@@ -167,7 +167,7 @@ void main() {
 
   test('the push carries the conversation the way native reads it', () {
     final live = liveActivityOf(
-      pet: _pet(TaskStateName.working, target: a),
+      task: _pet(TaskStateName.working, target: a),
       runs: [_run('a', title: 'A')],
       pending: const [],
     )!;
