@@ -118,9 +118,8 @@ final cloudAsrProvider = NotifierProvider<CloudAsrController, CloudAsrSettings>(
 
 // ── Calls ──────────────────────────────────────────────────────────────────
 
-/// What a call shows behind its light: deep water, the person's own picture,
-/// or her (伙伴小屋's character, speaking with the call's voice).
-enum CallBackdrop { sea, image, companion }
+/// What a call shows behind its light: deep water or the person's own picture.
+enum CallBackdrop { sea, image }
 
 /// The light in the middle of a call: the glass orb (the default), or
 /// Libraries.dev's voice ring (a glassy ribbon in the theme's colours) or its single grey line.

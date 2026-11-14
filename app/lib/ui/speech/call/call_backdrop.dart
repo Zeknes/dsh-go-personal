@@ -1,7 +1,6 @@
 // What a call shows behind its light (CallBackdrop): deep water (always drawn,
 // the others sit on it), the person's own picture softened and darkened so the
-// words stay readable, or her — 伙伴小屋's character, alone on the water,
-// mouthing the call's voice. Chosen from the call page's 背景 key or 设置 › 语音.
+// words stay readable. Chosen from the call page's 背景 key or 设置 › 语音.
 
 import 'dart:async';
 import 'dart:io';
@@ -13,14 +12,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../../../companion/companion_float.dart';
-import '../../../companion/companion_pack.dart';
-import '../../../companion/companion_state.dart';
 import '../../../l10n/l10n.dart';
 import '../../../speech/speech_settings.dart';
 import '../../../state/voice_settings.dart';
 import '../../common/app_sheet.dart';
-import '../../companion/companion_stage.dart';
 import '../../companion/companion_voice_page.dart';
 import '../../settings/settings_widgets.dart';
 import '../../settings/voice_settings_page.dart';
@@ -56,10 +51,6 @@ final callBackdropPickerProvider = Provider<Future<String?> Function()>(
     return file.path;
   },
 );
-
-/// Her pack is there to be shown (null: yes; otherwise why not).
-bool companionReady(AsyncValue<String?> availability) =>
-    availability is AsyncData<String?> && availability.value == null;
 
 // ── Layers ─────────────────────────────────────────────────────────────────
 
@@ -99,71 +90,6 @@ class ImageBackdrop extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Her, on the water, without her room. [controller] takes the call's mood
-/// and mouth; [onFailed] when she can't be shown (the call falls back to the water).
-class CompanionBackdrop extends ConsumerStatefulWidget {
-  const CompanionBackdrop({super.key, required this.controller, required this.onReady, required this.onFailed});
-
-  final CompanionStageController controller;
-  final VoidCallback onReady;
-  final VoidCallback onFailed;
-
-  @override
-  ConsumerState<CompanionBackdrop> createState() => _CompanionBackdropState();
-}
-
-class _CompanionBackdropState extends ConsumerState<CompanionBackdrop> {
-  CompanionPackStore? _store;
-  bool _ready = false;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_open());
-  }
-
-  Future<void> _open() async {
-    try {
-      final store = await ref.read(companionFloatStoreProvider)();
-      if (!await store.installed()) {
-        widget.onFailed();
-        return;
-      }
-      if (mounted) setState(() => _store = store);
-    } catch (_) {
-      widget.onFailed();
-    }
-  }
-
-  late final _events = CompanionStageEvents(
-    onReady: () {
-      if (!mounted) return;
-      setState(() => _ready = true);
-      widget.onReady();
-    },
-    onFailed: (_) => widget.onFailed(),
-    onTouch: (_, _) {},
-    onWake: () {},
-    onMood: (_) {},
-    onObject: (_) {},
-    onActivity: (_) {},
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final store = _store;
-    if (store == null) return const SizedBox.expand();
-    return AnimatedOpacity(
-      opacity: _ready ? 1 : 0,
-      duration: AppMotion.of(context, AppMotion.slow),
-      curve: AppMotion.enter,
-      child: IgnorePointer(
-        child: CompanionStage(store: store, controller: widget.controller, events: _events, bare: true),
-      ),
     );
   }
 }
@@ -222,8 +148,6 @@ class _BackdropChooserState extends ConsumerState<_BackdropChooser> {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final settings = ref.watch(callSettingsProvider);
-    final her = companionReady(ref.watch(companionFloatAvailabilityProvider));
-    final name = ref.watch(companionNameProvider);
     final hasImage = settings.image.isNotEmpty && File(settings.image).existsSync();
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
@@ -261,23 +185,11 @@ class _BackdropChooserState extends ConsumerState<_BackdropChooser> {
                       : const _Placeholder(icon: AppIcons.addImage),
                 ),
               ),
-              Expanded(
-                child: _Card(
-                  key: const ValueKey('backdrop-companion'),
-                  label: (name ?? '').trim().isEmpty ? l10n.speechBackdropCompanion : name!.trim(),
-                  selected: settings.backdrop == CallBackdrop.companion,
-                  onTap: her ? () => unawaited(_set(settings.copyWith(backdrop: CallBackdrop.companion))) : null,
-                  preview: const _Placeholder(icon: AppIcons.companionVoice),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            _error ??
-                (her
-                    ? (hasImage ? l10n.speechBackdropHintChange : l10n.speechBackdropHint)
-                    : l10n.speechBackdropNoCompanion),
+            _error ?? (hasImage ? l10n.speechBackdropHintChange : l10n.speechBackdropHint),
             style: theme.textTheme.bodySmall?.copyWith(
               color: _error != null ? theme.colorScheme.error : DshColors.of(context).textTertiary,
             ),
