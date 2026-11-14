@@ -22,8 +22,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../pets/overlay_channel.dart';
-import '../pets/pet_prefs.dart';
 import '../runtime/background_net.dart' show backgroundSettingsProvider;
 import '../runtime/runtime_bridge.dart' show RuntimePhase;
 import '../runtime/runtime_state.dart';
@@ -46,7 +44,7 @@ final voiceModelApproxMb = (voiceModelDefaultBytes / 1000000).round();
 const onboardingWantsVoiceKey = VoiceModelController.onboardingKey;
 
 /// What a person picks on first run: things DSH Go does, not permission names.
-enum AccessFeature { files, pet, phone, background, voice }
+enum AccessFeature { files, phone, background, voice }
 
 /// One system permission or maker's switch, in the order first run walks
 /// them: the system's own dialogs first, then settings pages, the makers'
@@ -113,7 +111,6 @@ List<AccessItem> accessItemsFor(AccessFeature feature, String? vendor) {
   final own = vendorSwitches[vendor] ?? const <AccessItem>[];
   final items = switch (feature) {
     AccessFeature.files => [AccessItem.storage],
-    AccessFeature.pet => [AccessItem.overlay],
     AccessFeature.phone => [AccessItem.accessibility, AccessItem.notifications, AccessItem.popup],
     AccessFeature.background => [
       AccessItem.notifications,
@@ -264,7 +261,6 @@ class SystemAccessDriver implements AccessDriver {
   Future<AccessReadings> read() async {
     final bridge = ref.read(runtimeBridgeProvider);
     final phone = ref.read(phoneProvider.notifier);
-    final pet = ref.read(petOverlayProvider.notifier);
     final info = _safe(() => ref.read(backgroundSettingsProvider.future));
     final mic = _safe(() async => switch (await _voice.invokeMethod<String>('permission')) {
       'granted' => true,
@@ -282,10 +278,8 @@ class SystemAccessDriver implements AccessDriver {
       await phone.refreshStatus();
       return true;
     });
-    final overlay = _safe(pet.refresh);
     await phoneRead;
     final status = ref.read(phoneProvider).status;
-    final petStatus = await overlay;
     final settings = await info;
     // Keep the pages that show the same facts in step.
     ref.invalidate(batteryExemptProvider);
@@ -298,10 +292,8 @@ class SystemAccessDriver implements AccessDriver {
       notifications: await notify,
       battery: await battery,
       accessibility: status.ready ? status.a11y.enabled : null,
-      overlay: petStatus == null || !petStatus.native ? null : petStatus.permission.usable,
-      overlayBlocked: petStatus?.permission == PetOverlayPermission.blocked,
       restricted: status.device.restricted,
-      sdk: status.device.sdkInt ?? (petStatus?.sdk == 0 ? null : petStatus?.sdk),
+      sdk: status.device.sdkInt,
       manufacturer: status.device.manufacturer,
       sideloaded: status.device.sideloaded,
       metered: await metered,
@@ -335,10 +327,7 @@ class SystemAccessDriver implements AccessDriver {
         case AccessItem.accessibility:
           return ref.read(phoneProvider.notifier).openAccessibilitySettings();
         case AccessItem.overlay:
-          // On with it: the pet is what the permission is for. A vivo switch the
-          // system doesn't report opens the app's page instead.
-          await ref.read(petOverlayProvider.notifier).turnOn();
-          return true;
+          return false;
       }
     });
     return opened ?? false;
@@ -552,13 +541,6 @@ class AccessSetupController extends Notifier<AccessSetup> {
     if (restart && !restarting && (phase == RuntimePhase.running || phase == RuntimePhase.starting)) {
       unawaited(EngineControl.restart(ref.container));
     }
-    if (features.contains(AccessFeature.pet)) {
-      // The pet itself, or the floating window has nothing to show (a light
-      // phone starts without one). Also in the app when the window stays off.
-      await attempt(ref.read(petPrefsProvider.notifier).adoptDefault);
-      if (readings.overlay == true && !ref.read(petOverlayProvider).working) {
-        await attempt(ref.read(petOverlayProvider.notifier).turnOn);
-      }
-    }
+
   }
 }

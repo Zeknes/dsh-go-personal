@@ -1,11 +1,10 @@
 // After the walk, what was picked is switched on as far as the phone
 // allows: 访问手机文件 only with the files reachable, 手机操控's switch (its
-// disclosure was accepted on the pick), the pet only once it can be drawn.
+// disclosure was accepted on the pick).
 // An engine already on its way restarts once, so its start has them.
 
 import 'package:dsh_app/runtime/runtime_bridge.dart';
 import 'package:dsh_app/runtime/runtime_state.dart';
-import 'package:dsh_app/pets/overlay_channel.dart';
 import 'package:dsh_app/state/access_state.dart';
 import 'package:dsh_app/state/phone_state.dart';
 import 'package:dsh_app/state/settings_state.dart';
@@ -13,7 +12,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../pets/overlay/fake_overlay_native.dart';
 import '../phone/support.dart';
 import '../shell/golden_harness.dart';
 import 'support.dart';
@@ -29,12 +27,10 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late FakePhoneNative phone;
-  late FakeOverlayNative pet;
 
   Future<ProviderContainer> container({LocalRuntimeController Function()? engine, bool phoneOn = false}) async {
     SharedPreferences.setMockInitialValues({});
     phone = FakePhoneNative(status: phoneStatus(enabled: phoneOn))..install();
-    pet = FakeOverlayNative(permission: 'granted')..install();
     final c = ProviderContainer(
       overrides: [
         settingsProvider.overrideWith(_Settings.new),
@@ -49,30 +45,26 @@ void main() {
     );
     addTearDown(c.dispose);
     c.read(accessSetupProvider);
-    c.read(petOverlayProvider);
     await Future<void>.delayed(Duration.zero);
     await c.read(phoneProvider.notifier).refreshStatus();
     return c;
   }
 
-  test('everything the phone allows: files, phone control, the pet', () async {
+  test('everything the phone allows: files and phone control', () async {
     final c = await container();
-    await c.read(accessSetupProvider.notifier).choose({AccessFeature.files, AccessFeature.phone, AccessFeature.pet});
+    await c.read(accessSetupProvider.notifier).choose({AccessFeature.files, AccessFeature.phone});
     await c.read(accessSetupProvider.notifier).apply(readingsWith(offPhone, storage: true, overlay: true));
     expect(c.read(settingsProvider).phoneStorage, isTrue);
     expect(phone.calls.where((m) => m.method == 'setEnabled').single.arguments, {'enabled': true});
-    expect(pet.calls.where((m) => m.method == 'setEnabled').single.arguments, {'enabled': true});
     // Nothing opened behind the person's back.
-    expect(pet.methods, isNot(contains('requestPermission')));
   });
 
   test('a permission still off leaves its feature off; phone control\'s switch is its own', () async {
     final c = await container();
-    await c.read(accessSetupProvider.notifier).choose({AccessFeature.files, AccessFeature.phone, AccessFeature.pet});
+    await c.read(accessSetupProvider.notifier).choose({AccessFeature.files, AccessFeature.phone});
     await c.read(accessSetupProvider.notifier).apply(offPhone);
     expect(c.read(settingsProvider).phoneStorage, isFalse);
     expect(phone.methods, contains('setEnabled'));
-    expect(pet.methods, isNot(contains('setEnabled')));
   });
 
   group('the engine, as far as it got', () {
@@ -140,6 +132,5 @@ void main() {
     await c.read(accessSetupProvider.notifier).apply(readingsWith(offPhone, storage: true, overlay: true));
     expect(c.read(settingsProvider).phoneStorage, isFalse);
     expect(phone.methods, isNot(contains('setEnabled')));
-    expect(pet.methods, isNot(contains('setEnabled')));
   });
 }

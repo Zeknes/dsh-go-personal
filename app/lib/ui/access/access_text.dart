@@ -12,7 +12,6 @@ import '../theme/app_icons.dart';
 extension AccessFeatureText on AccessFeature {
   IconData get icon => switch (this) {
     AccessFeature.files => AppIcons.fileAccess,
-    AccessFeature.pet => AppIcons.pet,
     AccessFeature.phone => AppIcons.phoneControl,
     AccessFeature.background => AppIcons.keepAlive,
     AccessFeature.voice => AppIcons.voice,
@@ -20,7 +19,6 @@ extension AccessFeatureText on AccessFeature {
 
   String title(L10n l10n) => switch (this) {
     AccessFeature.files => l10n.accessFeatureFiles,
-    AccessFeature.pet => l10n.accessFeaturePet,
     AccessFeature.phone => l10n.accessFeaturePhone,
     AccessFeature.background => l10n.accessFeatureBackground,
     AccessFeature.voice => l10n.accessFeatureVoice,
@@ -29,7 +27,6 @@ extension AccessFeatureText on AccessFeature {
   /// What it needs, in one line.
   String needs(L10n l10n) => switch (this) {
     AccessFeature.files => l10n.accessFeatureFilesNeeds,
-    AccessFeature.pet => l10n.accessFeaturePetNeeds,
     AccessFeature.phone => l10n.accessFeaturePhoneNeeds,
     AccessFeature.background => l10n.accessFeatureBackgroundNeeds,
     AccessFeature.voice => l10n.accessFeatureVoiceNeeds,

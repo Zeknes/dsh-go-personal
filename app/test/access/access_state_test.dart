@@ -9,7 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support.dart';
 
-const _i = AccessItem.values;
+final _i = AccessItem.values.where((item) => item != AccessItem.overlay).toList();
 
 void main() {
   group('the makers\' switches', () {
@@ -33,7 +33,6 @@ void main() {
   group('feature → items', () {
     test('on vivo', () {
       expect(accessItemsFor(AccessFeature.files, 'vivo'), [AccessItem.storage]);
-      expect(accessItemsFor(AccessFeature.pet, 'vivo'), [AccessItem.overlay]);
       expect(accessItemsFor(AccessFeature.phone, 'vivo'), [
         AccessItem.notifications,
         AccessItem.accessibility,
@@ -68,11 +67,6 @@ void main() {
         AccessItem.autostart,
         AccessItem.accessibility,
         AccessItem.popup,
-      ]);
-      expect(accessWalk({AccessFeature.pet, AccessFeature.phone}, null), [
-        AccessItem.notifications,
-        AccessItem.accessibility,
-        AccessItem.overlay,
       ]);
       expect(accessWalk(const [], 'vivo'), isEmpty);
     });
