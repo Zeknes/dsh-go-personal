@@ -1,0 +1,50 @@
+name: Personal runtime 26 build
+
+on:
+  push:
+    branches: ['personal/runtime-ubuntu-2604']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [x86_64, arm64-v8a]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.1
+      - name: Runtime unit tests
+        run: |
+          python3 -m unittest discover -s runtime/tests -p 'test_*.py'
+          node --test runtime/tests/*.test.mjs
+      - name: Build runtime
+        run: bash runtime/build-runtime.sh '${{ matrix.abi }}'
+      - name: Check packaged Ubuntu and tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static bubblewrap
+          mkdir -p "$RUNNER_TEMP/guest"
+          sudo tar -xf runtime/out/${{ matrix.abi }}/assets/runtime/rootfs-${{ matrix.abi }}.tar.xz -C "$RUNNER_TEMP/guest"
+          sudo cp /usr/bin/qemu-aarch64-static "$RUNNER_TEMP/guest/usr/bin/"
+          if [ '${{ matrix.abi }}' = arm64-v8a ]; then cmd='/usr/bin/qemu-aarch64-static /bin/bash'; else cmd='/bin/bash'; fi
+          sudo chroot "$RUNNER_TEMP/guest" $cmd -c 'set -e; . /etc/os-release; test "$VERSION_ID" = 26.04; node --version; git --version; python3 --version; apt-get check'
+          python3 -c 'import json; m=json.load(open("runtime/out/${{ matrix.abi }}/assets/runtime/manifest.json")); assert m["ubuntuVersion"] == "26.04.1"'
+      - name: Host integration test
+        if: matrix.abi == 'x86_64'
+        run: NETWORK=0 bash runtime/test-host.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: runtime-${{ matrix.abi }}
+          path: runtime/out/${{ matrix.abi }}/
+          if-no-files-found: error
+          retention-days: 7

@@ -314,9 +314,9 @@ os.replace(sys.argv[1], sys.argv[2])
     def test_pinned_distributions_do_not_require_live_checksum_lists(self):
         cases = []
         for arch in ("arm64", "amd64"):
-            name = f"ubuntu-base-24.04.5-base-{arch}.tar.gz"
+            name = f"ubuntu-base-26.04.1-base-{arch}.tar.gz"
             cases.append((f"ubuntu_base {arch}", name,
-                          f"https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cdimage/ubuntu-base/releases/24.04/release/{name}", None))
+                          f"https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cdimage/ubuntu-base/releases/26.04/release/{name}", None))
         for arch in ("arm64", "x64"):
             name = f"node-v24.22.1-linux-{arch}.tar.xz"
             cases.append((f"node_dist {arch}", name,
@@ -335,7 +335,7 @@ os.replace(sys.argv[1], sys.argv[2])
                 before = len(self.calls())
                 entry = f'PIN["$TEST_NAME"]="$EXPECTED"\nvalue="$({call})"\nprintf "%s" "$value"'
                 result = self.run_shell(entry, dict(TEST_NAME=name, EXPECTED=self.sha,
-                    UBUNTU_VERSION="24.04.5", NODE_VERSION="24.22.1", PYTHON_VERSION="3.12.15",
+                    UBUNTU_VERSION="26.04.1", NODE_VERSION="24.22.1", PYTHON_VERSION="3.12.15",
                     PBS_RELEASE="20261021", RUNTIME_INPUT_STORE_URL=self.store))
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(Path(result.stdout).read_text(), self.payload)
@@ -361,7 +361,7 @@ os.replace(sys.argv[1], sys.argv[2])
                     self.assertEqual(self.calls()[before:], [primary, cas])
 
     def test_unknown_overrides_still_resolve_original_metadata(self):
-        mirror = "https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cdimage/ubuntu-base/releases/24.04/release"
+        mirror = "https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cdimage/ubuntu-base/releases/26.04/release"
         name = "ubuntu-base-fixture-base-amd64.tar.gz"
         self.routes = {mirror + "/SHA256SUMS": [0, f"{self.sha}  {name}\n"],
                        mirror + "/" + name: [0, self.payload]}
@@ -521,7 +521,7 @@ os.execv(os.environ["LOCK_TEST_MV"], ["mv", *sys.argv[1:]])
                     self.routes.update({primary: [22, "404"], backup: [0, body]})
                     expected_calls.extend([primary, backup])
                     expected_paths.append(str(self.cache / "ubuntu" / "debs" / name))
-                lock = self.locks / f"ubuntu-noble-{arch}.json"
+                lock = self.locks / f"ubuntu-resolute-{arch}.json"
                 original = json.dumps(dict(want=["tzdata", "ca-certificates", "git"], packages=packages))
                 lock.write_text(original)
                 before = self.calls()
@@ -537,7 +537,7 @@ os.execv(os.environ["LOCK_TEST_MV"], ["mv", *sys.argv[1:]])
         cached.write_text(self.payload)
         packages = [dict(filename="pool/main/f/fixture/first_1_all.deb", sha256=self.sha),
                     dict(filename="pool/main/f/fixture/missing-hash_1_all.deb")]
-        lock = self.locks / "ubuntu-noble-amd64.json"
+        lock = self.locks / "ubuntu-resolute-amd64.json"
         original = json.dumps(dict(want=["tzdata", "ca-certificates", "git"], packages=packages))
         lock.write_text(original)
         result = self.run_shell(self.deb_inputs_entry(), {"TEST_ARCH": "amd64"})
@@ -556,7 +556,7 @@ os.execv(os.environ["LOCK_TEST_MV"], ["mv", *sys.argv[1:]])
             urls.append(f"https://mirrors.tuna.tsinghua.edu.cn/ubuntu/{filename}")
         backup = "https://launchpad.net/ubuntu/+archive/primary/+files/second_1_all.deb"
         self.routes = {urls[0]: [0, self.payload], urls[1]: [22, "partial"], backup: [22, "partial"]}
-        lock = self.locks / "ubuntu-noble-amd64.json"
+        lock = self.locks / "ubuntu-resolute-amd64.json"
         original = json.dumps(dict(want=["tzdata", "ca-certificates", "git"], packages=packages))
         lock.write_text(original)
         result = self.run_shell(self.deb_inputs_entry(), {"TEST_ARCH": "amd64"})

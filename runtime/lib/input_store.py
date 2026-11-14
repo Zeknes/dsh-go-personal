@@ -129,7 +129,7 @@ def inventory(repo, npm_locks=None, all_locks=False):
                                            ("libandroid-shmem", "SHMEM_VERSION", "liba")):
             name = package + "_" + values[version_key] + "_" + termux + ".deb"
             pinned(name, [values["TERMUX_REPO"] + "/pool/main/" + pool + "/" + package + "/" + name], abi, "termux_jni")
-        lock = repo / ("runtime/locks/ubuntu-noble-" + ubuntu + ".json")
+        lock = repo / ("runtime/locks/ubuntu-resolute-" + ubuntu + ".json")
         mirror = values["UBUNTU_ARCHIVE_" + ("AMD64" if ubuntu == "amd64" else "ARM64")]
         for index, package in enumerate(json.loads(lock.read_text(encoding="utf-8"))["packages"]):
             name = Path(package["filename"]).name
