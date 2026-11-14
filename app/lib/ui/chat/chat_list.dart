@@ -31,7 +31,6 @@ import '../../state/settings_state.dart';
 import '../common/app_dialog.dart';
 import '../common/bleed.dart';
 import '../common/ui_trace.dart';
-import '../pets/pet_perch.dart';
 import '../theme/app_icons.dart';
 import '../theme/theme.dart';
 import '../update/update_sheet.dart' show checkForUpdates;
@@ -1005,16 +1004,11 @@ class _ChatListState extends ConsumerState<ChatList> with SingleTickerProviderSt
               Positioned(
                 right: math.max(0.0, (constraints.maxWidth - AppSpace.readingWidth) / 2) + AppSpace.floatInset,
                 bottom: widget.bottomInset + 12,
-                // The pet keeps out of the key's way while it shows.
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: _showJump,
-                  builder: (context, visible, child) => PetAvoid(active: visible, child: child!),
-                  child: _JumpToBottom(
-                    visible: _showJump,
-                    hasNew: _hasNew,
-                    waiting: s.questions.length + s.approvals.where((a) => !s.autoAnswered.contains(a.eventId)).length,
-                    onTap: jumpToBottom,
-                  ),
+                child: _JumpToBottom(
+                  visible: _showJump,
+                  hasNew: _hasNew,
+                  waiting: s.questions.length + s.approvals.where((a) => !s.autoAnswered.contains(a.eventId)).length,
+                  onTap: jumpToBottom,
                 ),
               ),
             ],
