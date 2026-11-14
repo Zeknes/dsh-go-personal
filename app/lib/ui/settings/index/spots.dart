@@ -606,13 +606,6 @@ abstract final class Spots {
     keywords: (l) => l.searchKwHelp,
     condition: SpotCondition.nativeUi,
   );
-  static final community = SettingSpot(
-    'community',
-    page: SettingsPageId.hub,
-    group: _help,
-    title: (l) => l.hubSettingsCommunity,
-    keywords: (l) => l.searchKwCommunity,
-  );
 
   // 模型.
   static final addProvider = SettingSpot(
@@ -1104,7 +1097,6 @@ final _rows = <SettingSpot>[
   Spots.foldTurns,
   Spots.language,
   Spots.askAi,
-  Spots.community,
   Spots.addProvider,
   Spots.permissionCurrent,
   Spots.permissionDefault,

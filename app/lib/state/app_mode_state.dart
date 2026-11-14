@@ -1,5 +1,5 @@
 // 模式: what the app is for right now — 工作 (the DSH chat, in either 界面),
-// 伙伴 (the companion room) or 酒馆 (role play, docs/design/roleplay.md).
+// or 伙伴 (the companion room).
 // 工作 is the home; the other two are full pages over it, so everything the
 // home keeps running (links, shares, updates, notifications) keeps running.
 //
@@ -12,7 +12,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum AppMode { work, companion, tavern }
+enum AppMode { work, companion }
 
 class AppModeState {
   const AppModeState({this.startup = AppMode.work, this.loaded = false});

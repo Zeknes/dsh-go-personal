@@ -23,7 +23,6 @@ import '../chat/chat_screen.dart';
 import '../chat/composer_toast.dart' show composerToastGap;
 import '../engine/engine_screen.dart';
 import '../features/all_features_page.dart';
-import '../forum/forum_link_host.dart';
 import '../notify/background_net_host.dart';
 import '../notify/chat_alert_host.dart';
 import '../notify/voice_model_host.dart';
@@ -37,7 +36,6 @@ import '../session/session_detail_page.dart';
 import '../settings/search/settings_search_page.dart';
 import '../settings/settings_screen.dart';
 import '../share_code/share_code_host.dart';
-import '../tavern/tavern_intake.dart';
 import '../star/star_prompt_host.dart';
 import '../theme/theme.dart';
 import '../update/update_launch_check.dart';
@@ -351,12 +349,8 @@ class _HomeShellState extends ConsumerState<HomeShell> with TickerProviderStateM
                       const LinkHost(),
                       // Share codes (分享码): registers its links and files with the router.
                       const ShareCodeHost(),
-                      // Character cards opened with the app: into 酒馆.
-                      const TavernIntakeHost(),
                       // Share sheet, launcher shortcuts, the tile: into the chat (draws nothing).
                       SystemEntryHost(onReveal: _revealChat),
-                      // Forum links (sign-in return, topics): registers them with the router.
-                      const ForumLinkHost(),
                       // DS Bot: keeps its feed and notifications alive with the shell.
                       const BotAlertsHost(),
                       ExcludeSemantics(

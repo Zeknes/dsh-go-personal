@@ -5,7 +5,6 @@ import 'package:dsh_app/ui/common/tile_grid.dart';
 import 'package:dsh_app/ui/features/all_features_page.dart';
 import 'package:dsh_app/ui/features/feature_catalog.dart';
 import 'package:dsh_app/ui/files/files_page.dart';
-import 'package:dsh_app/ui/forum/forum_home_page.dart';
 import 'package:dsh_app/ui/shell/session_search_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,11 +26,9 @@ class _Inbox extends DsBotInboxController {
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('论坛有原生入口，文件标题一致，搜索使用返回结果的 action', () {
-    final forum = item('forum');
-    expect(forum.title, '论坛');
-    expect(forum.native!(null), isA<ForumHomePage>());
-    expect(forum.web, isNull);
+  test('文件标题一致，搜索使用返回结果的 action', () {
+    expect(featureSections.expand((section) => section.items).map((item) => item.id), isNot(contains('forum')));
+    expect(featureSections.expand((section) => section.items).map((item) => item.id), isNot(contains('community')));
     final files = item('files');
     expect(files.title, '文件');
     expect(files.native!('s1'), isA<WorkspaceFilesPage>());
