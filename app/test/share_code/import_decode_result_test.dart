@@ -7,7 +7,6 @@ import 'package:dsh_app/l10n/l10n.dart';
 import 'package:dsh_app/share_code/conversation_share.dart';
 import 'package:dsh_app/share_code/share_code_state.dart';
 import 'package:dsh_app/share_code/share_codec.dart';
-import 'package:dsh_app/share_code/share_link.dart';
 import 'package:dsh_app/share_code/share_models.dart';
 import 'package:dsh_app/state/settings_state.dart';
 import 'package:dsh_app/ui/share_code/import_sheet.dart';
@@ -102,7 +101,8 @@ void main() {
   ]) {
     testWidgets('${payload.kind.name} still reaches its confirm sheet without an install', (tester) async {
       final opener = await _pump(tester);
-      unawaited(openShareLink(opener, ShareLink.inline(payload.kind, encodeShareCode(payload))));
+      final file = await _file(tester, utf8.encode(encodeShareFile(payload)));
+      unawaited(openShareFile(opener, file));
       await _until(tester, find.byType(ShareImportSheet));
       expect(tester.widget<ShareImportSheet>(find.byType(ShareImportSheet)).payload.toJson(), payload.toJson());
     });

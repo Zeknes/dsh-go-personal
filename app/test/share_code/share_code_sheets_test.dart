@@ -4,14 +4,12 @@ import 'dart:io';
 
 import 'package:dsh_app/share_code/profile_export.dart';
 import 'package:dsh_app/share_code/share_codec.dart';
-import 'package:dsh_app/share_code/share_link.dart';
 import 'package:dsh_app/share_code/share_models.dart';
 import 'package:dsh_app/share_code/share_net.dart';
 import 'package:dsh_app/ui/common/app_sheet.dart' show SheetDragHandle;
 import 'package:dsh_app/ui/share_code/import_sheet.dart';
 import 'package:dsh_app/ui/share_code/plugin_share_sheet.dart';
 import 'package:dsh_app/ui/share_code/profile_share_sheet.dart';
-import 'package:dsh_app/ui/share_code/share_code_host.dart';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -180,18 +178,6 @@ void main() {
     expect(remote.settings['subagent']!['user'], {'maxDepth': 3});
     expect(local.argsOf('pluginManager/installBundle'), isEmpty);
     expect(find.text('已导入 2 项'), findsOneWidget);
-  });
-
-  testWidgets('a damaged link says so instead of opening', (tester) async {
-    final code = encodeShareCode(const PluginShare(notesPlugin));
-    final broken = ShareLink.inline(ShareKind.plugin, '${code.substring(0, code.length - 12)}.${code.split('.').last}');
-    await _pump(tester, (c) => openShareLink(c, broken), shareOverrides(net: sampleNet()));
-    for (var i = 0; i < 100 && find.text('这个分享码不完整或已损坏').evaluate().isEmpty; i++) {
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
-      await tester.pump();
-    }
-    expect(find.text('这个分享码不完整或已损坏'), findsOneWidget);
-    expect(find.text('安装插件'), findsNothing);
   });
 
   testWidgets('geometry: the done buttons are equal halves, 12 apart, on the gutters', (tester) async {

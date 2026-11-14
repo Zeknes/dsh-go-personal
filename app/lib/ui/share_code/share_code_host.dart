@@ -14,11 +14,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/l10n.dart';
 import '../../links/app_links.dart';
 import '../../share_code/conversation_share.dart';
-import '../../share_code/share_code_state.dart';
 import '../../share_code/share_codec.dart';
-import '../../share_code/share_link.dart';
 import '../../share_code/share_models.dart';
-import '../../share_code/share_net.dart';
 import 'import_sheet.dart';
 
 /// Short copy for a share code that can't be opened.
@@ -26,27 +23,9 @@ String shareOpenError(Object error) => switch (error) {
   ShareFormatException(reason: 'newer format') => appL10n.pluginsShareNeedsUpdate,
   ShareFormatException() => appL10n.pluginsShareUnusable,
   ShareDecodeException() => appL10n.pluginsShareDamaged,
-  GistException(:final message) => message,
   FileSystemException() => appL10n.pluginsShareFileReadFailed,
   _ => appL10n.pluginsShareOpenFailed,
 };
-
-/// Opens [link]'s confirm sheet (fetching a Gist first). Errors become a
-/// toast on [context]. Always true: the link was ours.
-Future<bool> openShareLink(BuildContext context, ShareLink link) async {
-  final container = ProviderScope.containerOf(context, listen: false);
-  final messenger = ScaffoldMessenger.maybeOf(context);
-  try {
-    final text = await fetchShareLinkText(link, container.read(shareNetProvider));
-    if (!context.mounted) return true;
-    final decoded = await compute(_decodeText, (text, context.l10n.pluginsChat));
-    if (!context.mounted) return true;
-    await _open(context, decoded, origin: link.isGist ? ShareOrigin.gist : ShareOrigin.link);
-  } catch (e) {
-    if (context.mounted) messenger?.showSnackBar(SnackBar(content: Text(shareOpenError(e))));
-  }
-  return true;
-}
 
 /// Opens a `.dshgo` file's confirm sheet.
 Future<bool> openShareFile(BuildContext context, File file) async {
