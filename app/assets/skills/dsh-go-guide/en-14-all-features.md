@@ -23,6 +23,6 @@ These need an open conversation; without one the page says **No chat open**:
 
 - Automations: scheduled tasks, see [Automations](18-schedules.md).
 - Plugins: installed plugins and the market; plugins with a native UI add their own panel at the end of the group.
-- Community and sharing: forum, community, DS Bot, share profile. A share profile packs chosen settings, plugins, skills and personal preferences into a link, a QR code or a file.
+- Community and sharing: DS Bot, share profile. A share profile packs chosen settings, plugins, skills and personal preferences into a link, a QR code or a file.
 - Tools: search chats, workspaces, web version.
 - Settings: the same pages under the same names as the settings screen, reachable from here too.

@@ -34,14 +34,14 @@ Shows your DeepSeek account or API key and balance; tap it to open your account.
 
 ## Appearance
 
-**Theme**, **Chat text size** and **Collapse steps when done**: see [Appearance](09-appearance.md). **Pets**: see [Pets](06-pets.md).
+**Theme**, **Chat text size** and **Collapse steps when done**: see [Appearance](09-appearance.md).
 
 ## General
 
-- **Interface**: the **Mode** group at the top sets **Open on launch** (Work, Companion or Tavern). Below it, choose whether the app opens to **Native** or **Web**, and DSH Web's options; see [Web mode](05-web.md).
+- **Interface**: choose whether the app opens to **Native** or **Web**, and DSH Web's options; see [Web mode](05-web.md).
 - **Language**: **System**, **简体中文** or **English**.
 - **Notifications**: turn on **Allow notifications**, then choose **Turn complete**, **Error or stopped**, **Needs approval** and **Questions for you**. Alerts from remote hosts need the app running and the connection online. Sound, banners and the lock screen are set in system settings.
-- **Voice**: the **Reading voice** (for reading replies aloud, the companion room and voice calls), how voice input recognizes speech (**Automatic**, **DeepSeek**, **System**, **Voice model** or **Another cloud service**), the voice model download, and for voice calls **Call background**, **Interrupt by speaking**, **Spoken answers** and **Speakerphone by default**.
+- **Voice**: the **Reading voice** (for reading replies aloud and voice calls), how voice input recognizes speech (**Automatic**, **DeepSeek**, **System**, **Voice model** or **Another cloud service**), the voice model download, and for voice calls **Call background**, **Interrupt by speaking**, **Spoken answers** and **Speakerphone by default**.
 - **Performance**: **Auto**, **Full** or **Light**, plus glass blur, interface motion, fluid motion and **Refresh rate** (Auto / Max / System).
 - **Background running**: see [FAQ](11-faq.md). Until it's set up, the row says so on the right.
 - **System permissions**: the system permissions each feature uses. [Open](dshgo://open/system-permissions)
@@ -59,7 +59,6 @@ Shows your DeepSeek account or API key and balance; tap it to open your account.
 ## Help and about
 
 - **Help**: takes "what can this app do" to a new chat, where the AI answers from this guide. Not shown in Web mode.
-- **Community**: chat groups and the forum.
 - **Diagnostics**: inspect the environment, export a bundle, or enable **Automatic failure analysis** (off by default); see [FAQ](11-faq.md).
 - **About DSH Go**:
   - **Version**: the app version, such as 0.9.2 (10251234), with the build number in parentheses. When there's a new version, this row on the Settings page says **Update available**.

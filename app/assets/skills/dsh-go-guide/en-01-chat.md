@@ -30,12 +30,12 @@ When the composer is empty and speech recognition is available, the send button 
 
 ## Read aloud and voice calls
 
-Under each reply there is a **Read aloud** key: tap it to hear the reply, tap again to stop. It's also in the reply's long-press menu, and in the tavern when you long-press a character's message. Code blocks, tables and link addresses are left out. DeepSeek's voice is used by default, paid by your signed-in DeepSeek account, or the API key in Settings when signed out. To use the phone's own voice or another service:
+Under each reply there is a **Read aloud** key: tap it to hear the reply, tap again to stop. It's also in the reply's long-press menu. Code blocks, tables and link addresses are left out. DeepSeek's voice is used by default, paid by your signed-in DeepSeek account, or the API key in Settings when signed out. To use the phone's own voice or another service:
 
 <!-- nav: commonSettings,voiceSettingsTitle,speechVoiceTitle -->
 `Settings › Voice › Reading voice`
 
-**Voice call** in the plus panel opens a call: just speak, pause, and it is sent; the answer is read while it is written. Start talking while the AI speaks and it stops to listen (turn off **Interrupt by speaking** in Settings); tap the light in the middle to skip an answer. At the bottom are **Mute**, **Hang up** and **Speaker** / **Earpiece**. Approvals and questions appear on the call page. The key at the top right changes the **Call background**: **Deep sea**, **My picture**, or your **Companion** from the companion room, who speaks along with the voice. Calls end when the app goes to the background.
+**Voice call** in the plus panel opens a call: just speak, pause, and it is sent; the answer is read while it is written. Start talking while the AI speaks and it stops to listen (turn off **Interrupt by speaking** in Settings); tap the light in the middle to skip an answer. At the bottom are **Mute**, **Hang up** and **Speaker** / **Earpiece**. Approvals and questions appear on the call page. The key at the top right changes the **Call background**: **Deep sea**, **My picture**. Calls end when the app goes to the background.
 
 ## Create images and video
 

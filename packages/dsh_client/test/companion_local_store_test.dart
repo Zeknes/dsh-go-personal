@@ -4,9 +4,6 @@ import 'dart:io';
 import 'package:dsh_client/companion.dart';
 import 'package:test/test.dart';
 
-// Verify the actual app facade in this pure Dart suite without Flutter.
-// ignore: avoid_relative_lib_imports
-import '../../../app/lib/companion/companion_local.dart';
 
 typedef Json = Map<String, Object?>;
 const id1 = '22222222-2222-4222-8222-222222222222';
@@ -121,24 +118,6 @@ void main() {
     await alias.companionSnapshot();
     expect(await disk(dir).readAsString(), before);
     expect((await store.exportCompanion())['capabilities'], containsPair('persistence', 'app-local'));
-  });
-
-  test('ADDENDUM-02 facade has three-argument events and keeps chat and pack separate', () async {
-    final local = CompanionLocal.at(dir, nowMilliseconds: () => now);
-    final chat = File('${dir.path}/light-chat.json');
-    await chat.writeAsString('synthetic chat placeholder');
-    final pack = Directory('${dir.path}/pack');
-    await pack.create();
-    await File('${pack.path}/placeholder').writeAsString('synthetic asset');
-    final initial = await local.companionSnapshot();
-    final next = await local.companionEvent(initial.storeId, initial.revision, 'visit');
-    expect(next.revision, 1);
-    expect(await disk(dir).exists(), isTrue);
-    await pack.delete(recursive: true);
-    expect((await local.companionSnapshot()).storeId, initial.storeId);
-    await code(() => local.companionEvent(initial.storeId, initial.revision, 'visit'), 'companion/conflict');
-    await local.resetCompanion(next.storeId, next.revision);
-    expect(await chat.readAsString(), 'synthetic chat placeholder');
   });
 
   test('analytic state: half-life, activity boundary and no absence penalty', () async {
@@ -335,7 +314,7 @@ void main() {
   test('write failure is not successful and does not publish an identity', () async {
     final obstacle = File('${dir.path}/blocked');
     await obstacle.writeAsString('existing unrelated bytes');
-    final blocked = CompanionLocal.at(Directory(obstacle.path), nowMilliseconds: () => now);
+    final blocked = CompanionLocalStore(appDirectory: Directory(obstacle.path), nowMilliseconds: () => now);
     await code(blocked.companionSnapshot, 'companion/io-error');
     expect(await obstacle.readAsString(), 'existing unrelated bytes');
     await obstacle.delete();
