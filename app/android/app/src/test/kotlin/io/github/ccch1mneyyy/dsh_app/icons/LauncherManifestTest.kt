@@ -56,9 +56,9 @@ class LauncherManifestTest {
         assertTrue(mainActivity.children("meta-data").any { it.getAttribute("android:name") == "flutter_deeplinking_enabled" })
     }
 
-    @Test fun thePhoneShowsTheAppAsDshGo() {
+    @Test fun thePhoneShowsThePersonalName() {
         val app = manifest().children("application").single()
-        assertEquals("DSH Go", app.getAttribute("android:label"))
+        assertEquals("DSH Personal", app.getAttribute("android:label"))
         // Notification titles say the same name.
         assertEquals(app.getAttribute("android:label"), AppStrings.APP_NAME)
         // Launcher entries, Recents and the share sheet all take the application's label.
@@ -67,26 +67,14 @@ class LauncherManifestTest {
         }
     }
 
-    @Test fun everyAliasIconShipsAllLayersAndDensities() {
+    @Test fun everyAliasUsesThePersonalIcon() {
         val app = manifest().children("application").single()
+        val expected = "@drawable/ic_personal_launcher"
+        assertEquals(expected, app.getAttribute("android:icon"))
         for (element in app.children("activity-alias")) {
-            val icon = element.getAttribute("android:icon").removePrefix("@mipmap/")
-            assertEquals("@mipmap/${icon}_round", element.getAttribute("android:roundIcon"))
-            for (name in listOf(icon, "${icon}_round")) {
-                val adaptive = File(main, "res/mipmap-anydpi-v26/$name.xml").readText()
-                val layers = Regex("<(background|foreground|monochrome) android:drawable=\"@(\\w+)/(\\w+)\"")
-                    .findAll(adaptive).associate { it.groupValues[1] to (it.groupValues[2] to it.groupValues[3]) }
-                assertEquals(name, setOf("background", "foreground", "monochrome"), layers.keys)
-                for ((type, res) in layers.values) {
-                    if (type == "drawable") assertTrue(res, File(main, "res/drawable/$res.xml").exists())
-                    else for (d in DENSITIES) assertTrue("$d/$res", File(main, "res/mipmap-$d/$res.png").exists())
-                }
-                for (d in DENSITIES) assertTrue("$d/$name", File(main, "res/mipmap-$d/$name.png").exists())
-            }
+            assertEquals(expected, element.getAttribute("android:icon"))
+            assertEquals(expected, element.getAttribute("android:roundIcon"))
         }
-    }
-
-    private companion object {
-        val DENSITIES = listOf("mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi")
+        assertTrue(File(main, "res/drawable/ic_personal_launcher.xml").exists())
     }
 }
