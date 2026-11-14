@@ -17,7 +17,7 @@
                                                │ 127.0.0.1:3080    │
                                                │ 或 SSH / 中继（远程主机）
 ┌──────────────────────────────────────────────▼───────────────────▼──────────┐
-│ PRoot Ubuntu 24.04 用户态                                                    │
+│ PRoot Ubuntu 26.04 用户态（新安装默认）                                      │
 │   dsh web --patch /etc/dsh-app/dsh-web.patch.yml --host 127.0.0.1 --port …  │
 │     ├─ 官方 DSH 引擎（runtime/patches 打了补丁）                              │
 │     └─ dsh-go-bridge（Cordis 插件：/dsh-go/v1/*，原生插件协议/伙伴/删除/配置） │
@@ -31,7 +31,7 @@
 | UI | Flutter 3.47（Dart 3.13）+ Riverpod 3 | 玻璃质感用 `BackdropFilter`；手写 Notifier，无 codegen |
 | 原生层 | Kotlin，Flutter 插件形式写在 `app/android/` | 解压运行时、管理 proot 进程、前台服务、手机操控 |
 | DSH 客户端 | 纯 Dart `packages/dsh_client` | 无 Flutter 依赖，可单测；本机与远程共用 |
-| 本地运行时 | Ubuntu 24.04 + Node + `@deepseek-ai/dsh`，经 proot 运行 | 免 Root、免 Termux |
+| 本地运行时 | Ubuntu 26.04.1 + Node + `@deepseek-ai/dsh`，经 proot 运行 | 新安装默认；免 Root、免 Termux；使用 Android 内核而非虚拟机 |
 
 五条贯穿主线：
 
@@ -303,7 +303,7 @@ DSH npm 前缀（runtime/locks）→ rtbuild 按 series 应用 139 个补丁（p
 
 升级：`manifest.upgrade` → `RuntimeInstaller` 解 staging → `EngineUpgrade` 事务
 （`engine.prepare` → `engine.upgrade` → 换入 → `rootfs.version`）→ 只替换固定引擎路径，
-用户 `/root` 数据保留；中断在任一步由 recover 续跑。详见 `docs/design/runtime-layers.md`。
+用户 `/root` 数据保留；中断在任一步由 recover 续跑。Ubuntu 24.04 旧运行时与新装默认的 26.04.1 基础系统不同，兼容检查会阻断跨 base 的引擎升级；这里不提供用户数据迁移。Linux 主机测试不能代替 Android PRoot 真机验证；arm64 QEMU 和 Android 真机尚未验证。详见 `docs/design/runtime-layers.md`。
 
 ### 5.5 补丁（runtime/patches）
 

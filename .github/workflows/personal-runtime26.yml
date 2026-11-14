@@ -23,16 +23,36 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24.22.1
-      - name: Runtime unit tests
-        run: |
-          python3 -m unittest discover -s runtime/tests -p 'test_*.py'
-          node --test runtime/tests/*.test.mjs
+      - name: Runtime Python tests
+        run: python3 -m unittest discover -s runtime/tests -p 'test_*.py'
       - name: Build runtime
         run: bash runtime/build-runtime.sh '${{ matrix.abi }}'
+      - name: Runtime Node tests
+        if: matrix.abi == 'x86_64'
+        run: |
+          prefix="$RUNNER_TEMP/dsh-test"
+          mkdir -p "$prefix"
+          version=$(sed -nE 's/^DSH_VERSION="\$\{DSH_VERSION:-(.+)\}"$/\1/p' runtime/build-runtime.sh)
+          cp "runtime/locks/dsh-$version/package.json" "runtime/locks/dsh-$version/package-lock.json" "$prefix/"
+          npm ci --prefix "$prefix" --ignore-scripts --no-audit --no-fund
+          cp "$prefix/node_modules/@deepseek-ai/dsh-fs-local/lib/index.js" "$prefix/fs-local-original.js"
+          python3 -I runtime/lib/rtbuild.py patch-dsh --prefix "$prefix" --dsh-version "$version"
+          export DSH_PREFIX="$prefix" DSH_TEST_PREFIX="$prefix"
+          export DSH_INSTALL="$prefix/node_modules/@deepseek-ai/dsh" DSH_TOOLS_DIR="$prefix/node_modules/@deepseek-ai/dsh-tools"
+          export DSH_FS_LOCAL_ORIGINAL_JS="$prefix/fs-local-original.js"
+          export PNPM_BIN="$PWD/runtime/.work/x86_64/pnpm-prefix/node_modules/pnpm/bin/pnpm.mjs"
+          node --test runtime/tests/*.test.mjs app/tool/engine_auth/*.test.mjs
+          python3 -I runtime/tests/test_patch_dsh.py
+          bash runtime/tests/run-guard-tests.sh "$prefix"
+          bash runtime/tests/run-native-tests.sh "$prefix"
       - name: Check packaged Ubuntu and tools
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-user-static bubblewrap
+          if [ '${{ matrix.abi }}' = arm64-v8a ]; then
+            test -r /proc/sys/fs/binfmt_misc/qemu-aarch64
+            grep -q '^enabled' /proc/sys/fs/binfmt_misc/qemu-aarch64
+          fi
           mkdir -p "$RUNNER_TEMP/guest"
           sudo tar -xf runtime/out/${{ matrix.abi }}/assets/runtime/rootfs-${{ matrix.abi }}.tar.xz -C "$RUNNER_TEMP/guest"
           sudo cp /usr/bin/qemu-aarch64-static "$RUNNER_TEMP/guest/usr/bin/"
