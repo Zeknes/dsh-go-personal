@@ -78,20 +78,11 @@ void main() {
 
   goldenBoth(
     'share_plugin',
-    () => SheetHost(open: (c) => showSharePluginSheet(c, plugin: notesPlugin, card: notesEntry)),
+    () => SheetHost(
+      open: (c) => showSharePluginSheet(c, plugin: notesPlugin, card: notesEntry),
+    ),
     overrides: () => shareOverrides(net: sampleNet(), out: RecordingShareOut(cache)),
     before: _open,
-  );
-
-  goldenBoth(
-    'share_plugin_qr',
-    () => SheetHost(open: (c) => showSharePluginSheet(c, plugin: notesPlugin)),
-    overrides: () => shareOverrides(net: sampleNet(), out: RecordingShareOut(cache)),
-    before: (tester) async {
-      await _open(tester);
-      await tester.tap(find.byKey(const ValueKey('share-code-qr')));
-      await _settle(tester);
-    },
   );
 
   ProfileExportSource? source;
@@ -137,23 +128,6 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('share-profile-next')));
       await _settle(tester);
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/share_profile_preview_$mode.png'));
-    });
-
-    testWidgets('share_profile_file ($mode)', (tester) async {
-      await tester.runAsync(loadGoldenFonts);
-      await loadSource(tester);
-      usePhoneSurface(tester);
-      await tester.pumpWidget(
-        goldenApp(
-          home: SheetHost(open: (c) => showSharePluginSheetLarge(c)),
-          brightness: brightness,
-          overrides: shareOverrides(net: sampleNet(), out: RecordingShareOut(cache)),
-        ),
-      );
-      await _open(tester);
-      await tester.tap(find.byKey(const ValueKey('share-code-gist')));
-      await _settle(tester);
-      await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/share_profile_file_$mode.png'));
     });
 
     testWidgets('import_plugin ($mode)', (tester) async {

@@ -96,22 +96,15 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('an official market plugin shares its market page', (tester) async {
-      await openShare(tester, '天气');
-      await tester.tap(find.byKey(const ValueKey('share-code-copy')));
-      await tester.pumpAndSettle();
-      expect(out.copied, ['https://go.dshtui.com/p/%40someone%2Fdsh-weather']);
-      await tester.tap(find.byKey(const ValueKey('share-code-share')));
-      await tester.pumpAndSettle();
-      expect(out.sharedText.single, endsWith('\nhttps://go.dshtui.com/p/%40someone%2Fdsh-weather'));
-    });
-
-    testWidgets('a plugin only dshfind lists keeps the share-code link', (tester) async {
-      await openShare(tester, 'novel-writer');
-      await tester.tap(find.byKey(const ValueKey('share-code-copy')));
-      await tester.pumpAndSettle();
-      expect(out.copied.single, startsWith('https://go.dshtui.com/share/#p='));
-    });
+    for (final title in ['天气', 'novel-writer']) {
+      testWidgets('export $title as a local file', (tester) async {
+        await openShare(tester, title);
+        expect(find.byKey(const ValueKey('share-code-copy')), findsNothing);
+        await tester.tap(find.byKey(const ValueKey('share-code-share')));
+        await tester.pumpAndSettle();
+        expect(out.sharedFiles.single, endsWith('.dshgo'));
+      });
+    }
   });
 
   group('opening', () {

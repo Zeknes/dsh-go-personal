@@ -210,7 +210,7 @@ abstract final class SettingsIndex {
   /// Every spot: the rows and each page's entry.
   static final List<SettingSpot> spots = [
     for (final p in _pages)
-      if (p.parent != null) p.entry,
+      if (p.parent != null && p.id != SettingsPageId.sharedLinks) p.entry,
     ..._rows,
   ];
 

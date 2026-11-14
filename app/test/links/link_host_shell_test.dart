@@ -9,7 +9,6 @@ import 'package:dsh_app/share_code/guest_fs.dart';
 import 'package:dsh_app/share_code/share_code_state.dart';
 import 'package:dsh_app/share_code/share_codec.dart';
 import 'package:dsh_app/share_code/share_import.dart';
-import 'package:dsh_app/share_code/share_link.dart';
 import 'package:dsh_app/share_code/share_models.dart';
 import 'package:dsh_app/share_code/share_net.dart';
 import 'package:dsh_app/state/connection_state.dart';
@@ -137,25 +136,6 @@ void main() {
     expect(find.text('无法打开这个链接'), findsNothing);
   });
 
-  testWidgets('a cold-start dshgo://share/plugin link opens the install sheet', (tester) async {
-    final native = _FakeLinksNative(tester);
-    final link = ShareLink.inline(ShareKind.plugin, encodeShareCode(const PluginShare(_plugin)));
-    await native.arrive(link.appLink.toString());
-
-    final engine = FakeEngine();
-    await tester.pumpWidget(_shell(extra: _shareOverrides(engine)));
-    await _waitFor(tester, find.text('安装插件'));
-    expect(find.text('读书笔记'), findsOneWidget);
-    await tester.pumpAndSettle();
-    expect(find.text('安装'), findsOneWidget);
-    expect(find.text('无法打开这个链接'), findsNothing);
-
-    await tester.tap(find.byKey(const ValueKey('share-import-primary')));
-    await tester.pumpAndSettle();
-    expect(engine.argsOf('pluginManager/installBundle').single['spec'], 'dsh-notes@1.4.2');
-    expect(find.text('已完成'), findsOneWidget);
-  });
-
   testWidgets('a cold-start file with spaces and Unicode opens and installs', (tester) async {
     final dir = Directory.systemTemp.createTempSync('share-links-');
     addTearDown(() => dir.deleteSync(recursive: true));
@@ -191,14 +171,6 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
-
-  testWidgets('the landing web link opens through the registered router', (tester) async {
-    final native = _FakeLinksNative(tester);
-    final link = ShareLink.inline(ShareKind.plugin, encodeShareCode(const PluginShare(_plugin)));
-    await native.arrive(link.webLink.toString());
-    await tester.pumpWidget(_shell(extra: _shareOverrides(FakeEngine())));
-    await _waitFor(tester, find.text('安装插件'));
-  });
 
   testWidgets('the home shell without links leaves no timers or errors behind', (tester) async {
     await tester.pumpWidget(_shell());
