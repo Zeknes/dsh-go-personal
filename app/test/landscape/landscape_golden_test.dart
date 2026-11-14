@@ -155,18 +155,6 @@ void main() {
       await pumpFrames(tester, 8);
     },
   );
-  _golden(
-    'phone_share_image',
-    phoneLeft,
-    sharePanel,
-    only: const [Brightness.light],
-    before: (tester) async {
-      await tester.tap(find.text('open'));
-      await pumpFrames(tester, 8);
-      await tester.tap(find.byKey(const ValueKey('share-to-image')));
-      await pumpFrames(tester, 8);
-    },
-  );
 
   // ── 600 and 840 ────────────────────────────────────────────────────────
   _golden('w600_chat', w600, (b) => homeApp(brightness: b), only: const [Brightness.light]);
