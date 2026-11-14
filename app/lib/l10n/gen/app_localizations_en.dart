@@ -25327,7 +25327,7 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get viewShareFileHint => 'Replay and continue in DSH Go';
+  String get viewShareFileHint => 'Save conversation data as a backup';
 
   @override
   String get viewShareWebHint => 'Opens in any browser, even offline';

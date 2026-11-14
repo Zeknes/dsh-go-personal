@@ -43733,7 +43733,7 @@ abstract class L10n {
   /// No description provided for @viewShareFileHint.
   ///
   /// In zh, this message translates to:
-  /// **'在 DSH Go 里回放、接着聊'**
+  /// **'保存对话数据，可用于备份'**
   String get viewShareFileHint;
 
   /// No description provided for @viewShareWebHint.

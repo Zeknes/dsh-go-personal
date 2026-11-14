@@ -912,7 +912,7 @@
       }
     }
   },
-  "viewShareFileHint": "在 DSH Go 里回放、接着聊",
+  "viewShareFileHint": "保存对话数据，可用于备份",
   "viewShareWebHint": "任何浏览器都能打开，不用联网",
   "viewShareMarkdownHint": "纯文本，随处可读",
   "viewShareLinkHint": "端到端加密，服务器看不到内容",

@@ -24025,7 +24025,7 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get viewShareFileHint => '在 DSH Go 里回放、接着聊';
+  String get viewShareFileHint => '保存对话数据，可用于备份';
 
   @override
   String get viewShareWebHint => '任何浏览器都能打开，不用联网';

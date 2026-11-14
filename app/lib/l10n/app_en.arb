@@ -7273,7 +7273,7 @@
   "viewShareEmpty": "This chat has no content yet",
   "viewShareMessageCount": "{count, plural, =1{1 message} other{{count} messages}}",
   "viewShareToolCount": "{count, plural, =1{1 tool call} other{{count} tool calls}}",
-  "viewShareFileHint": "Replay and continue in DSH Go",
+  "viewShareFileHint": "Save conversation data as a backup",
   "viewShareWebHint": "Opens in any browser, even offline",
   "viewShareMarkdownHint": "Plain text, readable anywhere",
   "viewShareLinkHint": "End-to-end encrypted. The server can’t see your content.",
