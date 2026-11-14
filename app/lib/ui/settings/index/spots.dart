@@ -76,7 +76,6 @@ enum SettingsPageId {
   media,
   plugins,
   appearance,
-  pets,
   interface,
   notifications,
   voice,
@@ -410,14 +409,6 @@ final _pages = <SettingsPageMeta>[
     keywords: (l) => l.searchKwTheme,
     freq: Freq.medium,
     links: const ['appearance'],
-  ),
-  SettingsPageMeta(
-    SettingsPageId.pets,
-    title: (l) => l.botsPets,
-    group: _look,
-    keywords: (l) => l.searchKwPets,
-    freq: Freq.medium,
-    links: const ['pets'],
   ),
   // 通用
   SettingsPageMeta(
@@ -757,51 +748,6 @@ abstract final class Spots {
     keywords: (l) => l.searchKwWallpaper,
   );
 
-  // 宠物.
-  static final petSize = SettingSpot(
-    'pet-size',
-    page: SettingsPageId.pets,
-    title: (l) => l.botsPetSize,
-    keywords: (l) => l.searchKwPetSize,
-  );
-  static final petQuiet = SettingSpot(
-    'pet-quiet',
-    page: SettingsPageId.pets,
-    title: (l) => l.botsPetQuiet,
-    keywords: (l) => l.searchKwPetQuiet,
-  );
-  static final petOutsideApp = SettingSpot(
-    'pet-outside-app',
-    page: SettingsPageId.pets,
-    title: (l) => l.botsPetOutsideApp,
-    keywords: (l) => l.searchKwPetOutside,
-  );
-  static final petDisplayWhen = SettingSpot(
-    'pet-display-when',
-    page: SettingsPageId.pets,
-    title: (l) => l.botsPetDisplayWhen,
-    keywords: (l) => l.searchKwPetDisplayWhen,
-  );
-  static final petOverlayShows = SettingSpot(
-    'pet-overlay-shows',
-    page: SettingsPageId.pets,
-    title: (l) => l.botsPetOverlayShows,
-    keywords: (l) => l.searchKwPetOverlayShows,
-  );
-  static final petOverlayFraming = SettingSpot(
-    'pet-overlay-framing',
-    page: SettingsPageId.pets,
-    title: (l) => l.botsPetOverlayFraming,
-    keywords: (l) => l.searchKwPetOverlayFraming,
-  );
-  static final workshop = SettingSpot(
-    'workshop',
-    page: SettingsPageId.pets,
-    title: (l) => l.workshopTitle,
-    keywords: (l) => l.searchKwWorkshop,
-    condition: SpotCondition.workshopBuilt,
-  );
-
   // 界面.
   static final uiMode = SettingSpot(
     'ui-mode',
@@ -1117,13 +1063,6 @@ final _rows = <SettingSpot>[
   Spots.iconShortcut,
   Spots.launchScreen,
   Spots.wallpaper,
-  Spots.petSize,
-  Spots.petQuiet,
-  Spots.petOutsideApp,
-  Spots.petDisplayWhen,
-  Spots.petOverlayShows,
-  Spots.petOverlayFraming,
-  Spots.workshop,
   Spots.uiMode,
   Spots.hardwareEnterSends,
   Spots.chatSuggestions,

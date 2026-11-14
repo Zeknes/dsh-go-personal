@@ -75,7 +75,7 @@ void main() {
       'schedules', 'permission', 'agent-presets', 'models', 'subagent-settings', 'agent-loop', //
       'shell-settings', 'web-search', 'plugins', 'plugin-inventory', 'cordis', 'agent-team', //
       'ds-bot', 'notifications', 'workspaces', 'general', 'account', 'remote', 'phone', //
-      'engine', 'diagnostics', 'settings', 'appearance', 'pets', 'shared-links', 'engine-settings', //
+      'engine', 'diagnostics', 'settings', 'appearance', 'shared-links', 'engine-settings', //
       'all-features', 'background',
     };
     expect(pageLinkIds, containsAll(before));
