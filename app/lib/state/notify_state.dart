@@ -19,6 +19,7 @@ import 'hosts_state.dart';
 import 'phone_turn_end.dart';
 import 'phone_state.dart' show phoneChannelProvider;
 import 'sessions_state.dart';
+import 'task_alerts.dart';
 
 export '../notify/chat_alerts.dart';
 export '../notify/notify_channel.dart';
@@ -219,12 +220,7 @@ enum AlertDelivery { none, banner, system }
 
 /// System notification in the background, a banner in the foreground, and
 /// nothing for the conversation already on screen.
-AlertDelivery deliveryFor(
-  ChatAlert alert, {
-  required NotifyPrefs prefs,
-  required bool foreground,
-  ChatTarget? viewed,
-}) {
+AlertDelivery deliveryFor(ChatAlert alert, {required NotifyPrefs prefs, required bool foreground, ChatTarget? viewed}) {
   if (!prefs.allows(alert.kind)) return AlertDelivery.none;
   // A lifecycle listener may still see the last foreground viewed target.
   if (!foreground) return AlertDelivery.system;
@@ -473,6 +469,7 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
       return;
     }
     if (current != null) {
+      ref.read(taskAlertsProvider.notifier).clearHost(host);
       _cancelPhonePrompt(host: host);
       _trackers.remove(host);
       unawaited(current.$2.dispose());
@@ -499,7 +496,10 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
         if (attached()) _onSessionGone(host, session);
       },
       onReannounce: (alert) {
-        if (attached()) _offerPhonePrompt(alert);
+        if (attached()) {
+          scope.read(taskAlertsProvider.notifier).record(alert);
+          _offerPhonePrompt(alert);
+        }
       },
       onRequestEpochChanged: (host) {
         if (attached()) _cancelPhonePrompt(host: host);
@@ -526,6 +526,7 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
         identical(_trackers[alert.host]?.$2, attached.$2) &&
         identical(attached.$1.client.mux.generation, generation) &&
         attached.$2.source.connected;
+    ref.read(taskAlertsProvider.notifier).record(alert);
     if (_offerPhonePrompt(alert)) return;
     // The turn that drove the phone: its overlay closes and the app may come
     // back to the conversation first (state/phone_turn_end.dart); the alert
@@ -711,12 +712,7 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
     if (ref.read(dsBotSessionFilterProvider)(alert.host, alert.sessionId)) return;
     final prefs = ref.read(notifyPrefsProvider);
     final foreground = ref.read(appForegroundProvider);
-    final delivery = deliveryFor(
-      alert,
-      prefs: prefs,
-      foreground: foreground,
-      viewed: ref.read(viewedChatProvider),
-    );
+    final delivery = deliveryFor(alert, prefs: prefs, foreground: foreground, viewed: ref.read(viewedChatProvider));
     switch (delivery) {
       case AlertDelivery.none:
         return;
@@ -728,6 +724,7 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
   }
 
   void _onWithdraw(HostRef host, String sessionId, String key) {
+    ref.read(taskAlertsProvider.notifier).remove((host: host, sessionId: sessionId, key: key));
     _cancelPhonePrompt(host: host, eventId: key);
     unawaited(_channel.cancel(notifyGroup(host, sessionId), key));
     final banner = _banner;
@@ -735,6 +732,7 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
   }
 
   void _onSessionGone(HostRef host, String sessionId) {
+    ref.read(taskAlertsProvider.notifier).clearSession(host, sessionId);
     _cancelPhonePrompt(host: host, sessionId: sessionId);
     _clearSessionNotifications(host, sessionId);
   }
