@@ -5,8 +5,7 @@
 //
 //   flutter test --update-goldens test/share/share_picker_test.dart
 
-import 'package:dsh_app/state/chat_state.dart';
-import 'package:dsh_app/ui/share/share_content.dart';
+import 'package:dsh_app/ui/share/share_selection.dart';
 import 'package:dsh_app/ui/share/share_picker.dart';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter/material.dart';
@@ -169,12 +168,4 @@ void main() {
       await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/picker_$mode.png'));
     });
   }
-
-  test('the long image needs no more than a stretch of exchanges', () {
-    final state = ChatState(items: _items(), title: '对话', loading: false);
-    final content = shareContentForItems(state, {'u11', 'a1', 'u21', 'a2'});
-    expect(content.isLong, isTrue);
-    expect(content.blocks.map((b) => b.runtimeType), [ShareQuestion, ShareAnswer, ShareQuestion, ShareAnswer]);
-    expect((content.blocks[2] as ShareQuestion).images, hasLength(1));
-  });
 }

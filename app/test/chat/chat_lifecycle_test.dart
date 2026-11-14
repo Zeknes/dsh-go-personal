@@ -4,8 +4,7 @@ import 'package:dsh_app/state/chat_state.dart';
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/sessions_state.dart';
 import 'package:dsh_app/ui/share/share_entry.dart';
-import 'package:dsh_app/ui/share/share_card.dart';
-import 'package:dsh_app/ui/share/share_content.dart';
+import 'package:dsh_app/ui/share/share_panel.dart';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -97,64 +96,54 @@ class _ShareChat extends ChatController {
 }
 
 void main() {
-  testWidgets(
-    'only a live interaction lease permits activation; preview and background stay passive',
-    (tester) async {
-      final client = _Client();
-      final container = _container(client);
-      final sub = container.listen(chatProvider('a'), (_, _) {});
-      final chat = container.read(chatProvider('a').notifier);
-      // The passive follow keeps its baseline when an interaction starts.
-      client.watches.single.add(_snapshot('内容'));
-      await tester.pump();
-      expect(client.optionsSeen.single.activationAllowed!(), isFalse);
-      var foreground = true;
-      final leave = chat.beginInteraction(() => foreground);
-      expect(client.optionsSeen.last.activate, isTrue);
-      expect(client.optionsSeen.last.activationAllowed!(), isTrue);
-      expect(
-        client.optionsSeen.length,
-        1,
-        reason: 'interaction never replaces the main follow',
-      );
-      foreground = false;
-      expect(client.optionsSeen.last.activationAllowed!(), isFalse);
-      foreground = true;
-      expect(client.optionsSeen.last.activationAllowed!(), isTrue);
-      leave();
-      expect(client.optionsSeen.last.activationAllowed!(), isFalse);
-      sub.close();
-      container.dispose();
-      await tester.pump();
-    },
-  );
+  testWidgets('only a live interaction lease permits activation; preview and background stay passive', (tester) async {
+    final client = _Client();
+    final container = _container(client);
+    final sub = container.listen(chatProvider('a'), (_, _) {});
+    final chat = container.read(chatProvider('a').notifier);
+    // The passive follow keeps its baseline when an interaction starts.
+    client.watches.single.add(_snapshot('内容'));
+    await tester.pump();
+    expect(client.optionsSeen.single.activationAllowed!(), isFalse);
+    var foreground = true;
+    final leave = chat.beginInteraction(() => foreground);
+    expect(client.optionsSeen.last.activate, isTrue);
+    expect(client.optionsSeen.last.activationAllowed!(), isTrue);
+    expect(client.optionsSeen.length, 1, reason: 'interaction never replaces the main follow');
+    foreground = false;
+    expect(client.optionsSeen.last.activationAllowed!(), isFalse);
+    foreground = true;
+    expect(client.optionsSeen.last.activationAllowed!(), isTrue);
+    leave();
+    expect(client.optionsSeen.last.activationAllowed!(), isFalse);
+    sub.close();
+    container.dispose();
+    await tester.pump();
+  });
 
-  testWidgets(
-    'regaining a lease never replaces either pending or ready primary follow',
-    (tester) async {
-      final client = _Client();
-      final container = _container(client);
-      final sub = container.listen(chatProvider('a'), (_, _) {});
-      final chat = container.read(chatProvider('a').notifier);
-      for (final ready in [false, true]) {
-        if (ready) {
-          client.watches.single.add(_snapshot('内容'));
-          await tester.pump();
-        }
-        for (var i = 0; i < 3; i++) {
-          final leave = chat.beginInteraction(() => true);
-          expect(client.optionsSeen.single.activationAllowed!(), isTrue);
-          leave();
-          expect(client.optionsSeen.single.activationAllowed!(), isFalse);
-        }
-        expect(client.optionsSeen.length, 1);
-        expect(client.cancellations, 0);
+  testWidgets('regaining a lease never replaces either pending or ready primary follow', (tester) async {
+    final client = _Client();
+    final container = _container(client);
+    final sub = container.listen(chatProvider('a'), (_, _) {});
+    final chat = container.read(chatProvider('a').notifier);
+    for (final ready in [false, true]) {
+      if (ready) {
+        client.watches.single.add(_snapshot('内容'));
+        await tester.pump();
       }
-      sub.close();
-      container.dispose();
-      await tester.pump();
-    },
-  );
+      for (var i = 0; i < 3; i++) {
+        final leave = chat.beginInteraction(() => true);
+        expect(client.optionsSeen.single.activationAllowed!(), isTrue);
+        leave();
+        expect(client.optionsSeen.single.activationAllowed!(), isFalse);
+      }
+      expect(client.optionsSeen.length, 1);
+      expect(client.cancellations, 0);
+    }
+    sub.close();
+    container.dispose();
+    await tester.pump();
+  });
 
   testWidgets('sharing an unopened conversation retains it while the panel is up', (tester) async {
     var disposed = 0;
@@ -171,12 +160,10 @@ void main() {
     );
     await tester.tap(find.text('分享'));
     await pumpFrames(tester);
-    expect(find.byType(ShareCard), findsOneWidget);
+    expect(find.byType(SharePanel), findsOneWidget);
     await tester.pump(const Duration(seconds: 61));
     expect(disposed, 0);
-    final card = tester.widget<ShareCard>(find.byType(ShareCard));
-    expect((card.content.blocks.single as ShareAnswer).markdown, '分享的回复');
-    Navigator.of(tester.element(find.byType(ShareCard))).pop();
+    Navigator.of(tester.element(find.byType(SharePanel))).pop();
     await pumpFrames(tester);
     expect(disposed, 1);
   });

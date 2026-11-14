@@ -15,7 +15,6 @@ import 'package:dsh_app/ui/chat/widgets/whale_tail.dart' show WhaleSprites;
 import 'package:dsh_app/ui/session/session_detail_page.dart';
 import 'package:dsh_app/ui/settings/settings_screen.dart';
 import 'package:dsh_app/state/chat_state.dart';
-import 'package:dsh_app/ui/share/share_image_page.dart';
 import 'package:dsh_app/ui/share/share_panel.dart';
 import 'package:dsh_app/ui/shell/session_search_page.dart';
 import 'package:dsh_app/ui/terminal/terminal_page.dart';
@@ -82,7 +81,6 @@ void main() {
   });
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    ShareCardStyle.lastTemplate = null;
     freezeClocks();
   });
   tearDown(thawClocks);
@@ -141,9 +139,7 @@ void main() {
   Widget sharePanel(Brightness brightness) {
     final state = shareChatState();
     return testApp(
-      _Launcher(
-        (context) => showSharePanel(context, ConversationSubject(sessionId: 's1', reply: firstReply(state))),
-      ),
+      _Launcher((context) => showSharePanel(context, ConversationSubject(sessionId: 's1', reply: firstReply(state)))),
       brightness: brightness,
       overrides: [chatProvider.overrideWith2((id) => FakeChatController(id, state))],
     );

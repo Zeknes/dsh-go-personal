@@ -10,16 +10,12 @@
 //
 //   flutter test test/shell/brand_mark_test.dart
 
-import 'package:dsh_app/ui/share/share_card.dart';
 import 'package:dsh_app/ui/shell/brand_glyph.g.dart';
 import 'package:dsh_app/ui/shell/brand_mark.dart';
 import 'package:dsh_app/ui/theme/theme.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../share/support.dart';
 import 'brand_support.dart';
 import 'golden_harness.dart';
 
@@ -130,35 +126,6 @@ void main() {
       final glyph = tester.getSize(find.byType(BrandMark));
       expect(glyph.height, closeTo(19 * 0.95 * 1.3 * BrandLockup.glyphScale, 0.01));
     });
-
-    for (final template in [ShareTemplate.light, ShareTemplate.dark, ShareTemplate.card]) {
-      testWidgets('share card brand line (${template.name}): the tagline under the word', (tester) async {
-        await tester.runAsync(loadGoldenFonts);
-        tester.view.devicePixelRatio = 2;
-        tester.view.physicalSize = const Size(ShareCard.width * 2, 2400 * 2);
-        addTearDown(tester.view.reset);
-        await tester.pumpWidget(
-          ProviderScope(
-            child: MaterialApp(
-              debugShowCheckedModeBanner: false,
-              theme: buildLightTheme(),
-              locale: const Locale('zh', 'CN'),
-              supportedLocales: const [Locale('zh', 'CN')],
-              localizationsDelegates: GlobalMaterialLocalizations.delegates,
-              home: Align(
-                alignment: Alignment.topLeft,
-                child: ShareCard(content: sampleReplyContent(), template: template),
-              ),
-            ),
-          ),
-        );
-        await tester.pump();
-        final word = await expectBrandLockup(tester, find.byType(BrandLockup));
-        final tagline = tester.getRect(find.text('手机上的 DSH · 扫码获取'));
-        expect(tagline.left, closeTo(word.left, 0.01));
-        expect(tagline.top, greaterThanOrEqualTo(word.bottom));
-      });
-    }
   });
 
   for (final brightness in Brightness.values) {

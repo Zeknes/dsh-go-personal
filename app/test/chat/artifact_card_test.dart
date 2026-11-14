@@ -11,9 +11,6 @@ import 'package:dsh_app/state/artifact_files.dart';
 import 'package:dsh_app/state/artifacts.dart';
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/ui/chat/widgets/artifact_card.dart';
-import 'package:dsh_app/ui/share/share_card.dart';
-import 'package:dsh_app/ui/share/share_content.dart';
-import 'package:dsh_app/ui/share/share_image_page.dart';
 import 'package:dsh_app/ui/share/share_panel.dart';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter/material.dart';
@@ -180,12 +177,7 @@ void main() {
     expect(find.byType(SharePanel), findsOneWidget);
     expect(find.byKey(const ValueKey('share-to-link')), findsNothing, reason: 'links are for conversations');
     expect(find.byKey(const ValueKey('share-to-text')), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('share-to-image')));
-    await tester.pumpAndSettle();
-    expect(find.byType(ShareImagePage), findsOneWidget);
-    expect(tester.widget<ShareCard>(find.byType(ShareCard)).content.blocks.single, isA<ShareFile>());
-    await tester.tap(find.descendant(of: find.byType(SharePanel), matching: find.byTooltip('返回')));
-    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('share-to-image')), findsNothing);
     await tester.tap(find.byKey(const ValueKey('share-to-file')));
     await tester.pumpAndSettle();
     expect(
