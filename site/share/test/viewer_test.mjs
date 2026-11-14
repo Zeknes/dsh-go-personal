@@ -17,7 +17,7 @@ import { runInNewContext } from 'node:vm';
 const here = dirname(fileURLToPath(import.meta.url));
 await import(join(here, '..', 'viewer.js'));
 const V = globalThis.DshgoViewer;
-const fixture = JSON.parse(readFileSync(join(here, '..', '..', '..', 'app', 'test', 'replay', 'fixtures', 'timeline.json'), 'utf8'));
+const fixture = JSON.parse(readFileSync(join(here, 'fixtures', 'timeline.json'), 'utf8'));
 
 let passed = 0;
 async function test(name, body) {
