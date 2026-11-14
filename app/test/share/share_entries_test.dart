@@ -5,25 +5,17 @@
 // (message_actions_test, wiring_test, artifact_card_test).
 
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:dsh_app/share_code/conversation_share.dart';
 import 'package:dsh_app/state/artifacts.dart' show FilesChannel;
-import 'package:dsh_app/state/settings_state.dart';
 import 'package:dsh_app/ui/chat/chat_screen.dart';
 import 'package:dsh_app/ui/common/segmented_pill.dart';
-import 'package:dsh_app/ui/replay/conversation_out.dart';
-import 'package:dsh_app/ui/replay/replay_page.dart';
-import 'package:dsh_app/ui/share/share_card.dart';
-import 'package:dsh_app/ui/share/share_content.dart';
-import 'package:dsh_app/ui/share/share_image_page.dart';
+import 'package:dsh_app/ui/export/conversation_out.dart';
 import 'package:dsh_app/ui/share/share_panel.dart';
 import 'package:dsh_app/ui/share/share_panel_pages.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../chat/support/harness.dart';
-import '../replay/support/rich_conversation.dart';
 import 'support.dart';
 
 class _Out extends ConversationOut {
@@ -37,25 +29,6 @@ class _Out extends ConversationOut {
 
   @override
   Future<void> shareText(String text) async => texts.add(text);
-}
-
-class _Links implements ConversationLinkMaker {
-  final uploads = <String>[];
-
-  @override
-  Future<ConversationLink> upload(Uint8List fileBytes, LinkExpiry expiry, {required String title}) async {
-    uploads.add(title);
-    return ConversationLink(url: Uri.parse('https://go.example.cn/c/a1B2c3D4e5#k=${'K' * 43}'), id: 'a1B2c3D4e5');
-  }
-
-  @override
-  Future<void> revoke(ConversationLink link) async {}
-
-  @override
-  Future<void> restore(ConversationLink link) async {}
-
-  @override
-  Duration get undoWindow => const Duration(seconds: 4);
 }
 
 Future<void> _settle(WidgetTester tester) async {
@@ -79,12 +52,8 @@ Future<void> _back(WidgetTester tester) async {
 
 /// From the panel's first page: every way out opens, and back.
 Future<void> _everyWayOut(WidgetTester tester, _Out out) async {
-  await _key(tester, 'share-to-link');
-  expect(find.byType(ShareLinkPage), findsOneWidget);
-  await _back(tester);
-  await _key(tester, 'share-to-image');
-  expect(find.byType(ShareImagePage), findsOneWidget);
-  await _back(tester);
+  expect(find.byKey(const ValueKey('share-to-link')), findsNothing);
+  expect(find.byKey(const ValueKey('share-to-image')), findsNothing);
   await _key(tester, 'share-to-file');
   expect(find.byType(ShareFilePage), findsOneWidget);
   await _key(tester, 'share-file-send');
@@ -106,14 +75,7 @@ void main() {
     final harness = ChatHarness(session: 's1', states: {'s1': state});
     usePhoneView(tester);
     await tester.pumpWidget(
-      testApp(
-        const ChatScreen(),
-        overrides: [
-          ...harness.overrides,
-          conversationOutProvider.overrideWithValue(out),
-          conversationLinkMakerProvider.overrideWithValue(_Links()),
-        ],
-      ),
+      testApp(const ChatScreen(), overrides: [...harness.overrides, conversationOutProvider.overrideWithValue(out)]),
     );
     await pumpFrames(tester);
 
@@ -133,43 +95,6 @@ void main() {
     expect(find.byType(SharePanel), findsOneWidget);
     final scope = tester.widget<SegmentedPill<ShareScope>>(find.byType(SegmentedPill<ShareScope>));
     expect(scope.selected, ShareScope.reply);
-    expect(tester.widget<ShareCard>(find.byType(ShareCard)).content.blocks.last, isA<ShareAnswer>());
-    await _everyWayOut(tester, out);
-  });
-
-  testWidgets('a reply in a replay shares from the replay: its card, its file, its pictures', (tester) async {
-    final out = _Out(dir);
-    final asset = richAsset();
-    usePhoneView(tester);
-    await tester.runAsync(loadTestFonts);
-    await tester.pumpWidget(
-      testApp(
-        ReplayPage(share: richConversation(), assets: {asset.id: asset}, autoplay: false),
-        overrides: [
-          settingsProvider.overrideWith(() => TestSettings()),
-          conversationOutProvider.overrideWithValue(out),
-          conversationLinkMakerProvider.overrideWithValue(_Links()),
-        ],
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('全文'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const ValueKey('reply-share')).last);
-    await _settle(tester);
-    expect(find.byType(SharePanel), findsOneWidget);
-    final card = tester.widget<ShareCard>(find.byType(ShareCard)).content;
-    expect(card.title, '修复登录重复提交');
-    expect((card.blocks.first as ShareQuestion).text, startsWith('登录按钮连点会重复提交'));
-
-    await _key(tester, 'share-to-file');
-    await _key(tester, 'share-file-send');
-    final file = decodeConversationFile(out.shared.single.$1.readAsStringSync());
-    expect(file.share.title, '修复登录重复提交');
-    expect(file.share.entries.whereType<UserEntry>().single.text, startsWith('登录按钮连点会重复提交'));
-    expect(file.assets.keys, [asset.id], reason: 'the picture comes from the replayed file');
-    await _back(tester);
     await _everyWayOut(tester, out);
   });
 }

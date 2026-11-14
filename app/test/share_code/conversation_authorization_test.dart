@@ -7,7 +7,7 @@ import 'package:dsh_app/share_code/share_codec.dart';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../replay/support/conversation_fixture.dart';
+import '../share/support/conversation_fixture.dart';
 
 void main() {
   test('Authorization credentials never reach exported tools or decoded share code', () {

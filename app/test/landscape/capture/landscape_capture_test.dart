@@ -37,7 +37,6 @@ import 'package:dsh_app/state/session_search.dart';
 import 'package:dsh_app/state/update_state.dart';
 import 'package:dsh_app/state/sessions_state.dart';
 import 'package:dsh_app/ui/bots/bot_sheets.dart' show confirmDelete;
-import 'package:dsh_app/ui/replay/replay_page.dart';
 import 'package:dsh_app/ui/share/share_panel.dart';
 import 'package:dsh_app/ui/shell/session_search_page.dart';
 import 'package:dsh_app/ui/update/update_sheet.dart';
@@ -57,7 +56,6 @@ import '../../phone/harness.dart';
 import '../../phone/support.dart' show FakePhoneNative, PhoneTestRuntime, runningRuntime;
 import '../../shell/adaptive/support.dart';
 import '../../shell/golden_harness.dart';
-import '../../replay/support/rich_conversation.dart';
 import '../../search/support.dart';
 import '../../share/support.dart' show firstReply, shareChatState;
 import '../../terminal/support.dart';
@@ -256,13 +254,6 @@ void main() {
     (_) => testApp(_Launcher((context) => confirmDelete(context, title: '删除这个任务？', body: '删除后不能恢复，历史记录也会一起清掉。'))),
     before: _tapOpen,
   );
-  capture('replay', (_) {
-    final asset = richAsset();
-    return testApp(
-      ReplayPage(share: richConversation(), assets: {asset.id: asset}, autoplay: false, preview: false),
-      overrides: [settingsProvider.overrideWith(() => TestSettings())],
-    );
-  });
   capture(
     'session_search',
     (_) => _golden(

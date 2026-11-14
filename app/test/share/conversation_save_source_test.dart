@@ -7,7 +7,7 @@ import 'package:dsh_app/state/artifacts.dart';
 import 'package:dsh_app/state/chat_state.dart';
 import 'package:dsh_app/state/settings_state.dart';
 import 'package:dsh_app/ui/common/app_sheet.dart';
-import 'package:dsh_app/ui/replay/conversation_out.dart';
+import 'package:dsh_app/ui/export/conversation_out.dart';
 import 'package:dsh_app/ui/share/share_panel.dart';
 import 'package:dsh_app/ui/share/share_panel_pages.dart';
 import 'package:dsh_client/dsh_client.dart';
@@ -58,18 +58,15 @@ class _NativeSaves {
   }
 }
 
-ReplaySource _replay(String text) {
+ChatState _chat(String text) {
   final at = DateTime.utc(2026, 10, 24);
-  return ReplaySource(
-    share: ConversationShare(title: _title, start: at, entries: const []),
-    state: ChatState(
-      title: _title,
-      loading: false,
-      items: [
-        UserChatItem(seq: 1, time: at, text: 'Please export', images: const [], files: const []),
-        AssistantChatItem(id: 'a2', seq: 2, time: at, text: text, reasoning: ''),
-      ],
-    ),
+  return ChatState(
+    title: _title,
+    loading: false,
+    items: [
+      UserChatItem(seq: 1, time: at, text: 'Please export', images: const [], files: const []),
+      AssistantChatItem(id: 'a2', seq: 2, time: at, text: text, reasoning: ''),
+    ],
   );
 }
 
@@ -121,7 +118,7 @@ void main() {
         cache.deleteSync(recursive: true);
       });
       final out = ConversationOut(files: const FilesChannel(_channel), cacheRoot: () async => cache);
-      var source = _replay('FIRST-CONTENT');
+      final chat = FakeChatController('s1', _chat('FIRST-CONTENT'));
       usePhoneView(tester);
       await tester.pumpWidget(
         testApp(
@@ -129,7 +126,7 @@ void main() {
             builder: (context) => Scaffold(
               body: TextButton(
                 key: const ValueKey('open-share'),
-                onPressed: () => showSharePanel(context, ConversationSubject(replay: source)),
+                onPressed: () => showSharePanel(context, const ConversationSubject(sessionId: 's1')),
                 child: const Text('open'),
               ),
             ),
@@ -137,7 +134,7 @@ void main() {
           overrides: [
             settingsProvider.overrideWith(TestSettings.new),
             conversationOutProvider.overrideWithValue(out),
-            conversationLinkMakerProvider.overrideWithValue(null),
+            chatProvider.overrideWith2((id) => chat),
           ],
         ),
       );
@@ -150,7 +147,7 @@ void main() {
       }))!;
       expect(firstModel.work, ShareWork.saving);
       await _close(tester);
-      source = _replay('SECOND-CONTENT');
+      chat.emit(_chat('SECOND-CONTENT'));
       final secondModel = await _open(tester, format);
       final expectedSecond = secondModel.built!.of(format).text;
       expect(secondModel, isNot(same(firstModel)));
@@ -210,7 +207,7 @@ void main() {
           builder: (context) => Scaffold(
             body: TextButton(
               key: const ValueKey('open-share'),
-              onPressed: () => showSharePanel(context, ConversationSubject(replay: _replay('RETRY-CONTENT'))),
+              onPressed: () => showSharePanel(context, const ConversationSubject(sessionId: 's1')),
               child: const Text('open'),
             ),
           ),
@@ -218,7 +215,7 @@ void main() {
         overrides: [
           settingsProvider.overrideWith(TestSettings.new),
           conversationOutProvider.overrideWithValue(out),
-          conversationLinkMakerProvider.overrideWithValue(null),
+          chatProvider.overrideWith2((id) => FakeChatController(id, _chat('RETRY-CONTENT'))),
         ],
       ),
     );

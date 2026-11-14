@@ -3,9 +3,7 @@
 // hosted link (the share host's client, app/lib/share_hosted/). Seams: tests
 // record instead.
 
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -15,12 +13,7 @@ import '../../l10n/l10n.dart';
 import '../../share_code/conversation_html.dart';
 import '../../share_code/conversation_share.dart' show prefixKeepingPairs;
 import '../../share_code/share_codec.dart' show shareFileExtension, shareFileMime;
-import '../../share_hosted/hosted_client.dart' show HostedShareException;
-import '../share_hosted/hosted_link_maker.dart' show hostedConversationLinkMaker;
 import '../../state/artifacts.dart' show FilesChannel, filesChannelProvider;
-
-/// 「我的分享链接」 for the share panel's link page.
-export '../share_hosted/manage_links_button.dart' show ManageLinksButton;
 
 /// The file forms of a shared conversation.
 enum ConversationFormat {
@@ -123,61 +116,3 @@ String fileStem(String title) {
   if (cleaned.isEmpty) return appL10n.fileChatFallback;
   return cleaned.length <= 40 ? cleaned : prefixKeepingPairs(cleaned, 40).trim();
 }
-
-// ── Hosted links ─────────────────────────────────────────────────────────────
-
-/// How long a hosted link lives (the share host's `ttl`).
-enum LinkExpiry {
-  week,
-  month,
-  forever;
-
-  String get label => switch (this) {
-    LinkExpiry.week => appL10n.viewLinkWeek,
-    LinkExpiry.month => appL10n.viewLinkMonth,
-    LinkExpiry.forever => appL10n.viewLinkForever,
-  };
-}
-
-/// A hosted link: `https://<host>/c/<id>#k=<key>`.
-class ConversationLink {
-  const ConversationLink({required this.url, this.expiresAt, this.id});
-
-  final Uri url;
-
-  /// Null: kept until deleted.
-  final DateTime? expiresAt;
-
-  /// The share host's id, for [ConversationLinkMaker.revoke].
-  final String? id;
-
-  /// `go.dshtui.com/c/a1B2c3D4e5`: the link without its scheme and key.
-  String get display => '${url.host}${url.path}';
-}
-
-/// Puts a conversation file on the share host, encrypted on the phone (the
-/// key only in the link, after `#`). A seam over the share host's client
-/// (`app/lib/share_hosted/`, adapted in ui/share_hosted/hosted_link_maker.dart,
-/// which also keeps every link in 「我的分享链接」); null leaves 「链接」 out of
-/// the share sheet.
-abstract class ConversationLinkMaker {
-  /// [fileBytes] is the `.dshgo` file's UTF-8 text; [title] names it in
-  /// 「我的分享链接」. Throws [HostedShareException] (its `message` is for the
-  /// person).
-  Future<ConversationLink> upload(Uint8List fileBytes, LinkExpiry expiry, {required String title});
-
-  /// 「停止分享」: the link stops working once [undoWindow] passes without
-  /// [restore].
-  Future<void> revoke(ConversationLink link);
-
-  /// Takes a [revoke] back, within [undoWindow].
-  Future<void> restore(ConversationLink link);
-
-  /// How long a revoke can be taken back.
-  Duration get undoWindow;
-}
-
-final conversationLinkMakerProvider = Provider<ConversationLinkMaker?>(hostedConversationLinkMaker);
-
-/// The bytes a link maker uploads.
-Uint8List conversationFileBytes(String fileText) => Uint8List.fromList(utf8.encode(fileText));

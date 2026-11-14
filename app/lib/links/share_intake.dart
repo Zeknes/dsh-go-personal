@@ -13,8 +13,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../share_code/share_codec.dart' show shareFileExtension, shareFileMime;
-import '../share_code/share_link.dart';
-import '../share_hosted/hosted_link.dart' show findHostedUrl;
 import 'native_inbox.dart';
 
 /// One shared file, copied into the app cache (readable with dart:io).
@@ -61,21 +59,6 @@ class IncomingShare {
   /// A lone `.dshgo` file: imported, not chatted about.
   SharedFile? get shareCodeFile =>
       files.length == 1 && skipped.isEmpty && files.single.isShareCode ? files.single : null;
-
-  /// A hosted conversation link inside shared text (forwarded from a chat
-  /// app): opens its replay.
-  Uri? get hostedLink {
-    final body = text;
-    if (body == null || files.isNotEmpty || skipped.isNotEmpty) return null;
-    return findHostedUrl(body);
-  }
-
-  /// A share link inside shared text (a 分享码 forwarded from a chat app).
-  ShareLink? get shareLink {
-    final body = text;
-    if (body == null || files.isNotEmpty || skipped.isNotEmpty) return null;
-    return ShareLink.find(body);
-  }
 
   /// What goes into the composer: the text, and over a bare link the page
   /// title it came with. A subject alone (a file's name, a mail subject next

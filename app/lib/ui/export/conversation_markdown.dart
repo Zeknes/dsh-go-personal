@@ -1,26 +1,5 @@
-// 「接着聊」 on a replayed conversation. DSH has no way to import a conversation, so
-// a new one starts with this one attached as Markdown and a first line in the
-// composer; the person edits it and sends.
-
-import 'dart:convert';
-
 import '../../l10n/l10n.dart';
 import '../../share_code/conversation_share.dart';
-import '../../state/attachments.dart';
-import '../../state/compose_inbox.dart';
-import 'conversation_out.dart' show fileStem;
-
-/// What the composer says above the attachment.
-String get continueChatPrompt => appL10n.viewContinuePrompt;
-
-/// The new-chat fill for [share].
-ComposeRequest continueChatRequest(ConversationShare share) {
-  final bytes = utf8.encode(conversationMarkdown(share));
-  return ComposeRequest(
-    text: continueChatPrompt,
-    attachments: [DraftAttachment(name: '${fileStem(share.title)}.md', bytes: bytes)],
-  );
-}
 
 /// [share] as Markdown a model reads well: who said what, the work in one
 /// line per call, no thinking, no tool output.

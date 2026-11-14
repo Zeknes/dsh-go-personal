@@ -22,7 +22,6 @@ import '../../plugins/plugin_inventory_page.dart';
 import '../../plugins/plugins_screen.dart';
 import '../../providers/providers_page.dart';
 import '../../remote/remote_screen.dart';
-import '../../share_hosted/hosted_links_page.dart';
 import '../about_page.dart';
 import '../appearance/appearance_page.dart';
 import '../background_guide_page.dart';
@@ -53,7 +52,7 @@ Widget settingsPage(SettingsPageId id, {String? sessionId}) => switch (id) {
   SettingsPageId.voiceReading => const CompanionVoicePage(shared: true),
   SettingsPageId.notifications => const NotificationSettingsPage(),
   SettingsPageId.replyPrefs => const ReplyPrefsPage(),
-  SettingsPageId.sharedLinks => const HostedLinksPage(),
+  SettingsPageId.sharedLinks => const SettingsScreen(),
   SettingsPageId.phone => const PhoneControlScreen(),
   SettingsPageId.phoneAppRules => const PhoneAppRulesPage(),
   SettingsPageId.phoneAndroidShell => const AndroidShellPage(),

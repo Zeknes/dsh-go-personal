@@ -19,7 +19,6 @@ import '../../share_code/share_codec.dart';
 import '../../share_code/share_link.dart';
 import '../../share_code/share_models.dart';
 import '../../share_code/share_net.dart';
-import '../replay/replay_page.dart' show openConversationReplay;
 import 'import_sheet.dart';
 
 /// Short copy for a share code that can't be opened.
@@ -90,11 +89,10 @@ Object _decodeText((String, String) input) {
   return SharePayload.fromJson(json);
 }
 
-/// A conversation opens its replay; anything else its confirm sheet.
-Future<void> _open(BuildContext context, Object decoded, {required ShareOrigin origin}) =>
-    decoded is DecodedConversation
-    ? openConversationReplay(context, decoded)
-    : showShareImportSheet(context, decoded as SharePayload, origin: origin);
+Future<void> _open(BuildContext context, Object decoded, {required ShareOrigin origin}) async {
+  if (decoded is DecodedConversation) return;
+  await showShareImportSheet(context, decoded as SharePayload, origin: origin);
+}
 
 /// Put it once inside the home route, next to [LinkHost]. It draws nothing:
 /// it registers the `share` host, the landing page and `.dshgo` files with
@@ -113,23 +111,13 @@ class _ShareCodeHostState extends ConsumerState<ShareCodeHost> {
   void initState() {
     super.initState();
     final router = ref.read(linkRouterProvider);
-    _off
-      ..add(router.registerLinkHandler(shareLinkHost, _link))
-      ..add(router.registerLinkHandler(shareLandingRoute, _link))
-      ..add(router.registerFileHandler(shareFileExtension, _file));
+    _off.add(router.registerFileHandler(shareFileExtension, _file));
   }
 
   BuildContext? get _ui {
     final routed = ref.read(linkRouterProvider).context;
     if (routed != null) return routed;
     return mounted ? context : null;
-  }
-
-  Future<bool> _link(Uri uri) async {
-    final link = ShareLink.parse(uri);
-    final ui = _ui;
-    if (link == null || ui == null) return false;
-    return openShareLink(ui, link);
   }
 
   Future<bool> _file(Uri uri) async {

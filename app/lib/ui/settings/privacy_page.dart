@@ -13,7 +13,6 @@ import '../engine_settings/namespace_copy.dart';
 import '../phone/phone_control_screen.dart';
 import '../engine_settings/schema_form.dart';
 import '../share_code/profile_share_sheet.dart';
-import '../share_hosted/hosted_links_tile.dart';
 import '../shell/page_frame.dart';
 import 'settings_widgets.dart';
 import 'usage_stats_section.dart';
@@ -32,10 +31,7 @@ class PrivacyPage extends ConsumerWidget {
       children: [
         SettingsSection(
           title: l10n.hubPrivacySharing,
-          children: [
-            const HostedLinksSettingsTile(icon: false),
-            SettingsTile(spot: Spots.shareConfig, onTap: () => unawaited(showShareProfileSheet(context))),
-          ],
+          children: [SettingsTile(spot: Spots.shareConfig, onTap: () => unawaited(showShareProfileSheet(context)))],
         ),
         const UsageStatsSection(),
         SettingsSection(
@@ -44,9 +40,9 @@ class PrivacyPage extends ConsumerWidget {
           children: [
             ListTile(
               title: Text(l10n.phoneLocalOcrTitle),
-              onTap: () => unawaited(Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(builder: (_) => const PhoneControlScreen()),
-              )),
+              onTap: () => unawaited(
+                Navigator.of(context).push<void>(MaterialPageRoute<void>(builder: (_) => const PhoneControlScreen())),
+              ),
             ),
           ],
         ),

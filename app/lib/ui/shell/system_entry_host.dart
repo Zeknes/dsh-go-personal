@@ -78,14 +78,6 @@ class _SystemEntryHostState extends ConsumerState<SystemEntryHost> {
       ref.read(appLinksProvider).add(Uri.file(file.path));
       return;
     }
-    if (share.hostedLink case final link?) {
-      ref.read(appLinksProvider).add(link);
-      return;
-    }
-    if (share.shareLink case final link?) {
-      ref.read(appLinksProvider).add(link.appLink);
-      return;
-    }
     final request = await ComposeRequest.fromShare(share, heldBytes: _heldDraftBytes);
     if (mounted) await _compose(request);
   }

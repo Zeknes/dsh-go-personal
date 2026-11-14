@@ -12,24 +12,19 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../l10n/l10n.dart';
-import '../../share_code/conversation_share.dart' show DecodedConversation, maxConversationFileBytes;
-import '../common/app_dialog.dart';
+import '../../share_code/conversation_share.dart' show maxConversationFileBytes;
 import '../common/app_sheet.dart';
 import '../common/list_page_row.dart';
 import '../common/segmented_pill.dart';
 import '../common/sheet_navigator.dart';
-import '../replay/conversation_out.dart';
-import '../replay/replay_page.dart' show openConversationReplay;
+import '../export/conversation_out.dart';
 import '../session/workspace_files.dart' show formatBytes;
-import '../share_code/share_code_panel.dart' show ShareQrPage;
 import '../share_code/share_code_widgets.dart';
-import '../share_hosted/hosted_links_page.dart' show linkExpiryText;
 import '../theme/app_icons.dart';
 import '../theme/theme.dart';
-import 'share_image_page.dart';
+import '../export/export_widgets.dart';
 import 'share_panel.dart';
 import 'share_picker.dart';
 
@@ -62,8 +57,7 @@ class SharePanelHome extends StatelessWidget {
     final l10n = context.l10n;
     final model = SharePanelScope.of(context);
     final conversation = model.conversation != null;
-    final card = model.card;
-    final ready = card != null;
+    final ready = model.ready;
     final privacy = model.privacy;
     final top = <Widget>[
       if (conversation && model.scopes.length > 1)
@@ -99,36 +93,10 @@ class SharePanelHome extends StatelessWidget {
         ),
       ],
     ];
-    final Widget preview;
-    if (card != null) {
-      preview = ListenableBuilder(
-        listenable: model.style,
-        builder: (context, _) => ShareCardPreview(card: model.style.card(context, card)),
-      );
-    } else {
-      preview = _Placeholder(empty: model.isEmpty);
-    }
+    final Widget preview = ready ? const SizedBox.shrink() : _Placeholder(empty: model.isEmpty);
     final destinations = ShareActionRow(
       key: const ValueKey('share-destinations'),
       actions: [
-        if (model.linkMaker != null)
-          ShareAction(
-            key: const ValueKey('share-to-link'),
-            icon: AppIcons.link,
-            label: l10n.viewShareLink,
-            onTap: ready ? () => _open(context, (_) => const ShareLinkPage()) : null,
-          ),
-        ShareAction(
-          key: const ValueKey('share-to-image'),
-          icon: AppIcons.shareImage,
-          label: l10n.viewShareAsImage,
-          onTap: ready
-              ? () => _open(
-                  context,
-                  (_) => ShareImagePage(content: model.card!, style: model.style, refine: model.artifact?.refine),
-                )
-              : null,
-        ),
         ShareAction(
           key: const ValueKey('share-to-file'),
           icon: AppIcons.shareFile,
@@ -191,7 +159,11 @@ class _Placeholder extends StatelessWidget {
               )
             : SizedBox.square(
                 dimension: 22,
-                child: CircularProgressIndicator(strokeWidth: 2, strokeCap: StrokeCap.round, color: colors.textTertiary),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  strokeCap: StrokeCap.round,
+                  color: colors.textTertiary,
+                ),
               ),
       ),
     );
@@ -270,16 +242,11 @@ class _Summary extends StatelessWidget {
 }
 
 /// 「预览」: the replay the receiver gets (no 「接着聊」).
-void _previewReplay(BuildContext context, ShareBuild built) =>
-    unawaited(openConversationReplay(context, DecodedConversation(built.share, built.assets, code: ''), preview: true));
-
-/// What goes out as a file: its name, its size, and 「预览」 when it replays.
 class _FileTile extends StatelessWidget {
-  const _FileTile({required this.name, this.size, this.onPreview});
+  const _FileTile({required this.name, this.size});
 
   final String name;
   final String? size;
-  final VoidCallback? onPreview;
 
   @override
   Widget build(BuildContext context) => SheetGroup(
@@ -291,245 +258,11 @@ class _FileTile extends StatelessWidget {
         title: name,
         titleMaxLines: 2,
         subtitle: size,
-        trailing: onPreview == null
-            ? null
-            : TextButton(
-                key: const ValueKey('share-preview-replay'),
-                style: TextButton.styleFrom(minimumSize: const Size(0, 44)),
-                onPressed: onPreview,
-                child: Text(context.l10n.viewSharePreview),
-              ),
       ),
     ],
   );
 }
 
-// ── 链接 ───────────────────────────────────────────────────────────────────
-
-/// 「链接」: how long it lives, then the link and what to do with it.
-///
-/// ```
-/// ‹ 链接
-/// (  7 天  (( 30 天 ))  永久  )
-/// 🔒 端到端加密，服务器看不到内容
-/// ┌ 🔗 go.dshtui.com/c/a1B2c3D4e5 · 11 月 24 日到期 ┐
-/// (复制链接) (二维码) (分享) (停止分享)       or  [ 生成链接 ]
-///               我的分享链接
-/// ```
-class ShareLinkPage extends StatefulWidget {
-  const ShareLinkPage({super.key});
-
-  @override
-  State<ShareLinkPage> createState() => _ShareLinkPageState();
-}
-
-class _ShareLinkPageState extends State<ShareLinkPage> {
-  bool _copied = false;
-  Timer? _copiedReset;
-  late final SharePanelModel _model = SharePanelScope.of(context);
-
-  @override
-  void initState() {
-    super.initState();
-    // The size (and whether it fits) shows before the link is made.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(_model.prepare());
-    });
-  }
-
-  @override
-  void dispose() {
-    _copiedReset?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _copy() async {
-    HapticFeedback.lightImpact();
-    await _model.copyLink();
-    if (!mounted) return;
-    setState(() => _copied = true);
-    _copiedReset?.cancel();
-    _copiedReset = Timer(const Duration(milliseconds: 1600), () {
-      if (mounted) setState(() => _copied = false);
-    });
-  }
-
-  void _qr(SharePanelModel model) {
-    final link = model.link;
-    final built = model.built;
-    if (link == null || built == null) return;
-    SheetNavigator.of(context).push((_) => ShareQrPage(link: '${link.url}', title: built.share.title));
-  }
-
-  Future<void> _stop(SharePanelModel model) async {
-    final l10n = context.l10n;
-    final title = model.built?.share.title ?? '';
-    final ok = await showAppDialog<bool>(
-      context: context,
-      builder: (dialog) => AlertDialog(
-        title: Text(l10n.viewShareStopTitle),
-        content: Text(l10n.remoteHostedDeleteBody(title)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
-          FilledButton(
-            key: const ValueKey('share-link-stop-confirm'),
-            style: FilledButton.styleFrom(
-              backgroundColor: DshColors.of(dialog).danger,
-              foregroundColor: DshColors.of(dialog).onDanger,
-            ),
-            onPressed: () => Navigator.pop(dialog, true),
-            child: Text(l10n.viewShareStop),
-          ),
-        ],
-      ),
-    );
-    if (ok == true) await model.stopLink();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final theme = Theme.of(context);
-    final colors = DshColors.of(context);
-    final model = SharePanelScope.of(context);
-    final link = model.link;
-    final stopped = model.stopped;
-    final built = model.built;
-    final busy = model.work == ShareWork.link;
-    final tooLarge = built?.tooLarge ?? false;
-    final top = <Widget>[
-      SegmentedPill<LinkExpiry>(
-        key: const ValueKey('share-link-expiry'),
-        segments: [for (final e in LinkExpiry.values) PillSegment(e, e.label)],
-        selected: model.expiry,
-        onChanged: busy ? null : (e) => model.expiry = e,
-      ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
-        child: Row(
-          children: [
-            Icon(AppIcons.lock, size: 14, color: colors.textTertiary),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                l10n.viewShareLinkHint,
-                style: theme.textTheme.bodySmall?.copyWith(color: colors.textTertiary),
-              ),
-            ),
-          ],
-        ),
-      ),
-      const SizedBox(height: 16),
-      if (link != null)
-        SheetGroup(
-          margin: EdgeInsets.zero,
-          children: [
-            ListPageRow(
-              key: const ValueKey('share-link-row'),
-              icon: AppIcons.link,
-              title: link.display,
-              // Large text on a narrow phone: the address wraps, never cut.
-              titleMaxLines: 4,
-              titleStyle: AppType.mono(size: 14, color: theme.colorScheme.onSurface),
-              subtitle: linkExpiryText(link.expiresAt, model.now()),
-            ),
-          ],
-        )
-      else if (stopped != null)
-        SheetGroup(
-          margin: EdgeInsets.zero,
-          children: [
-            ListPageRow(
-              key: const ValueKey('share-link-stopped'),
-              icon: AppIcons.stopSharing,
-              iconColor: colors.textTertiary,
-              title: l10n.viewShareStopped,
-              trailing: TextButton(
-                key: const ValueKey('share-link-restore'),
-                style: TextButton.styleFrom(minimumSize: const Size(0, 44)),
-                onPressed: model.restoreLink,
-                child: Text(l10n.remoteUndo),
-              ),
-            ),
-          ],
-        )
-      else
-        _FileTile(
-          name: built?.share.title ?? model.chat.title ?? '',
-          size: built == null ? null : formatBytes(built.file.bytes),
-          onPreview: built == null ? null : () => _previewReplay(context, built),
-        ),
-    ];
-    final Widget action;
-    if (link == null) {
-      action = FilledButton(
-        key: const ValueKey('share-link-make'),
-        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(ShareActionBar.height)),
-        onPressed: busy || tooLarge || built == null ? null : model.makeLink,
-        child: busy
-            ? SizedBox.square(
-                dimension: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  strokeCap: StrokeCap.round,
-                  color: theme.colorScheme.onPrimary,
-                ),
-              )
-            : Text(l10n.viewShareCreateLink),
-      );
-    } else {
-      action = ShareActionRow(
-        actions: [
-          ShareAction(
-            key: const ValueKey('share-link-copy'),
-            icon: AppIcons.link,
-            label: _copied ? l10n.commonCopied : l10n.commonCopyLink,
-            done: _copied,
-            onTap: _copy,
-          ),
-          ShareAction(
-            key: const ValueKey('share-link-qr'),
-            icon: AppIcons.qrCode,
-            label: l10n.viewQrCode,
-            onTap: () => _qr(model),
-          ),
-          ShareAction(
-            key: const ValueKey('share-link-share'),
-            icon: AppIcons.share,
-            label: l10n.commonShare,
-            onTap: model.shareLink,
-          ),
-          ShareAction(
-            key: const ValueKey('share-link-stop'),
-            icon: AppIcons.stopSharing,
-            label: l10n.viewShareStop,
-            onTap: () => _stop(model),
-          ),
-        ],
-      );
-    }
-    final String? error =
-        model.error ?? (tooLarge ? l10n.viewShareTooLarge(maxConversationFileBytes ~/ (1024 * 1024)) : null);
-    return SharePageLayout(
-      title: l10n.viewShareLink,
-      top: top,
-      bottom: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ShareStatusBar(error: error, child: action),
-          const SizedBox(height: 4),
-          const Center(child: ManageLinksButton()),
-        ],
-      ),
-    );
-  }
-}
-
-// ── 文件 ───────────────────────────────────────────────────────────────────
-
-/// 「文件」: a conversation as a dsh-go file, a web page or Markdown; a
-/// delivered file as itself. Then 「保存」 / 「分享」.
 class ShareFilePage extends StatefulWidget {
   const ShareFilePage({super.key});
 
@@ -587,13 +320,7 @@ class _ShareFilePageState extends State<ShareFilePage> {
         ),
         const SizedBox(height: 16),
       ],
-      _FileTile(
-        name: name,
-        size: size,
-        onPreview: built == null || !format.carriesFile || artifact != null
-            ? null
-            : () => _previewReplay(context, built),
-      ),
+      _FileTile(name: name, size: size),
       if (hint != null)
         Padding(
           padding: const EdgeInsets.fromLTRB(8, 10, 8, 0),
@@ -608,8 +335,7 @@ class _ShareFilePageState extends State<ShareFilePage> {
     final idle = ready && !model.fileTooLarge;
     final progress = model.progress;
     final String? error =
-        model.error ??
-        (model.fileTooLarge ? l10n.viewShareTooLarge(maxConversationFileBytes ~/ (1024 * 1024)) : null);
+        model.error ?? (model.fileTooLarge ? l10n.viewShareTooLarge(maxConversationFileBytes ~/ (1024 * 1024)) : null);
     return SharePageLayout(
       title: l10n.viewShareAsFile,
       top: top,

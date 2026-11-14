@@ -355,10 +355,10 @@ describe('the old public mirror', () => {
     }
   });
 
-  it('leaves the share routes alone', async () => {
+  it('retired public sharing routes are unavailable', async () => {
     const { env } = await seeded();
-    expect((await serve(req('/share/'), env)).status).toBe(200);
-    expect((await fetchWorker(env, req('/c/Ab3dE5gH9k'))).status).toBe(200);
+    expect((await serve(req('/share/'), env)).status).toBe(404);
+    expect((await fetchWorker(env, req('/c/Ab3dE5gH9k'))).status).toBe(404);
     expect((await fetchWorker(env, req('/betas'))).status).toBe(404);
   });
 });

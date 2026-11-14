@@ -19,7 +19,7 @@ import 'package:dsh_app/share_code/share_models.dart';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../replay/support/conversation_fixture.dart';
+import '../share/support/conversation_fixture.dart';
 
 final _now = DateTime.utc(2026, 10, 25, 3);
 

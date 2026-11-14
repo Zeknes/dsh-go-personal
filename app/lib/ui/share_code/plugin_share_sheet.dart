@@ -18,8 +18,6 @@ import '../common/app_sheet.dart';
 import '../common/list_page_row.dart';
 import '../common/sheet_navigator.dart';
 import '../plugins/plugin_widgets.dart' show PluginAvatar;
-import '../share/share_entry.dart' show pluginCardContent, pluginShareText;
-import '../share/share_image_page.dart';
 import 'share_code_panel.dart';
 import 'share_code_widgets.dart';
 
@@ -139,20 +137,7 @@ class _PluginShareSheetState extends ConsumerState<PluginShareSheet> {
           const SizedBox(height: 24),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: kSheetGutter),
-            child: ShareCodePanel(
-              payload: _payload,
-              title: p.displayTitle,
-              webLink: widget.webLink,
-              onImage: switch (widget.card) {
-                final card? => () => SheetNavigator.of(context).push(
-                  (page) => ShareImagePage(
-                    content: pluginCardContent(page, card, webLink: widget.webLink),
-                    linkText: pluginShareText(card, webLink: widget.webLink),
-                  ),
-                ),
-                null => null,
-              },
-            ),
+            child: ShareCodePanel(payload: _payload, title: p.displayTitle),
           ),
           const SizedBox(height: 20),
         ],

@@ -20,7 +20,6 @@ import '../../share_code/conversation_export.dart';
 import '../../share_code/conversation_html.dart';
 import '../../share_code/conversation_redact.dart' show markdownWithoutImages, redactText;
 import '../../share_code/conversation_share.dart';
-import '../../share_hosted/hosted_client.dart' show HostedShareException;
 import '../../state/app_info.dart';
 import '../../state/artifact_files.dart';
 import '../../state/artifacts.dart';
@@ -31,10 +30,9 @@ import '../../usage/usage_stats.dart';
 import '../chat/dsh_ui/dsh_ui.dart' show dshUiPlainText;
 import '../common/app_sheet.dart';
 import '../common/sheet_navigator.dart';
-import '../replay/continue_chat.dart' show conversationMarkdown;
-import '../replay/conversation_out.dart';
-import 'share_content.dart';
-import 'share_image_page.dart';
+import '../export/conversation_markdown.dart' show conversationMarkdown;
+import '../export/conversation_out.dart';
+import 'share_selection.dart';
 import 'share_panel_pages.dart';
 
 /// How much of a conversation goes out.
@@ -89,61 +87,31 @@ sealed class ShareSubject {
   const ShareSubject();
 }
 
-/// A conversation: one in the chat ([sessionId]) or a replayed one
-/// ([replay]). [reply] is the reply the panel was opened from (「这条回复」);
-/// without it the panel starts at the whole conversation.
+/// A conversation in the current host.
 final class ConversationSubject extends ShareSubject {
-  const ConversationSubject({this.sessionId, this.replay, this.reply}) : assert(sessionId != null || replay != null);
-
-  final String? sessionId;
-  final ReplaySource? replay;
+  const ConversationSubject({required this.sessionId, this.reply});
+  final String sessionId;
   final AssistantChatItem? reply;
-}
-
-/// A replayed conversation as the replay page holds it.
-@immutable
-class ReplaySource {
-  const ReplaySource({required this.share, required this.state, this.assets = const {}, this.container});
-
-  final ConversationShare share;
-
-  /// The conversation at the end of its replay, as the chat's items.
-  final ChatState state;
-
-  /// The file's pictures by asset id (= the replay's attachment id).
-  final Map<String, ConversationAsset> assets;
-
-  /// The replay page's providers (its pictures come from the file).
-  final ProviderContainer? container;
 }
 
 /// A delivered file: its card ([card], [refine] once the picture or first
 /// lines are in) and the file itself.
 final class ArtifactSubject extends ShareSubject {
-  const ArtifactSubject({required this.sessionId, required this.artifact, required this.card, this.refine});
+  const ArtifactSubject({required this.sessionId, required this.artifact});
 
   final String sessionId;
   final Artifact artifact;
-  final ShareContent card;
-  final Future<ShareContent?>? refine;
 }
 
 /// Opens the share panel for [subject], at [scope] (default: the reply when
 /// there is one, otherwise the whole conversation).
 Future<void> showSharePanel(BuildContext context, ShareSubject subject, {ShareScope? scope}) {
   HapticFeedback.selectionClick();
-  final replay = switch (subject) {
-    ConversationSubject(:final replay?) => replay.container,
-    _ => null,
-  };
   return showAppSheet<void>(
     context,
     dismissal: SheetDismissal.drag,
     heightFactor: 0.92,
-    builder: (_) {
-      final panel = SharePanel(subject: subject, scope: scope);
-      return replay == null ? panel : UncontrolledProviderScope(container: replay, child: panel);
-    },
+    builder: (_) => SharePanel(subject: subject, scope: scope),
   );
 }
 
@@ -179,7 +147,7 @@ class _SharePanelState extends ConsumerState<SharePanel> {
       clock: widget.clock ?? DateTime.now,
       loadImage: widget.loadImage,
     );
-    if (widget.subject case ConversationSubject(:final sessionId?, replay: null)) {
+    if (widget.subject case ConversationSubject(:final sessionId)) {
       // Held while the panel is up; history read for a whole conversation
       // arrives through it.
       _chat = ref.listenManual(chatProvider(sessionId), (_, _) => _model.chatChanged());
@@ -240,7 +208,7 @@ class ShareBuild {
 }
 
 /// Busy states of the panel's actions.
-enum ShareWork { text, link, saving, sharing }
+enum ShareWork { text, saving, sharing }
 
 /// Everything the panel's pages show and do.
 class SharePanelModel extends ChangeNotifier {
@@ -264,7 +232,6 @@ class SharePanelModel extends ChangeNotifier {
   final ExportImageLoader? _loadImage;
 
   /// The card's look, shared by the preview and 「图片」.
-  final style = ShareCardStyle();
 
   /// The panel's clock (a link's expiry, a file's time).
   DateTime now() => _clock();
@@ -274,9 +241,7 @@ class SharePanelModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    _stopTimer?.cancel();
     _doneTimer?.cancel();
-    style.dispose();
     super.dispose();
   }
 
@@ -287,15 +252,7 @@ class SharePanelModel extends ChangeNotifier {
   /// Starts what the first page needs.
   void start() {
     if (_scope == ShareScope.whole) unawaited(_loadHistory());
-    // A file's picture or first lines arrive after the panel is up.
-    artifact?.refine?.then((card) {
-      if (card == null || _disposed) return;
-      _artifactCard = card;
-      _notify();
-    }, onError: (Object _) {});
   }
-
-  ShareContent? _artifactCard;
 
   // ── The subject ──────────────────────────────────────────────────────────
 
@@ -310,11 +267,9 @@ class SharePanelModel extends ChangeNotifier {
   };
 
   String? get _sessionId => conversation?.sessionId;
-  ReplaySource? get _replay => conversation?.replay;
 
   /// The conversation as it is now.
   ChatState get chat {
-    if (_replay case final replay?) return replay.state;
     return _ref.read(chatProvider(_sessionId!));
   }
 
@@ -333,11 +288,7 @@ class SharePanelModel extends ChangeNotifier {
   /// Nothing to share yet.
   bool get isEmpty => conversation != null && !loading && shareable.isEmpty;
 
-  /// The links this app can make (null: none).
-  ConversationLinkMaker? get linkMaker => conversation == null ? null : _ref.read(conversationLinkMakerProvider);
-
   void chatChanged() {
-    _card = null;
     _notify();
   }
 
@@ -351,7 +302,11 @@ class SharePanelModel extends ChangeNotifier {
   SharePrivacy get privacy => _privacy;
 
   /// The scopes this conversation offers: 「这条回复」 only with a reply.
-  List<ShareScope> get scopes => [if (conversation?.reply != null) ShareScope.reply, ShareScope.picked, ShareScope.whole];
+  List<ShareScope> get scopes => [
+    if (conversation?.reply != null) ShareScope.reply,
+    ShareScope.picked,
+    ShareScope.whole,
+  ];
 
   /// What 「选中消息」 starts with: the picks so far, else the reply and its
   /// question, else the last exchange.
@@ -393,7 +348,6 @@ class SharePanelModel extends ChangeNotifier {
 
   /// What is shared changed: what was made of the old content goes.
   void _changed() {
-    _card = null;
     _built = null;
     _building = null;
     _error = null;
@@ -404,32 +358,7 @@ class SharePanelModel extends ChangeNotifier {
   /// What scope and privacy give, as one value (a link is made for one).
   Object get _contentKey => (_scope, (keys.toList()..sort()).join('\n'), _privacy);
 
-  // ── The card ─────────────────────────────────────────────────────────────
-
-  ShareContent? _card;
-
-  /// The card for what is in scope (null while the conversation is still
-  /// arriving or empty).
-  ShareContent? get card {
-    if (artifact case final a?) return _artifactCard ?? a.card;
-    if (loading || isEmpty) return null;
-    return _card ??= _makeCard();
-  }
-
-  ShareContent _makeCard() {
-    final state = chat;
-    final reply = anchor;
-    if (_scope == ShareScope.reply && reply != null) {
-      return shareContentForReply(
-        state,
-        reply,
-        sessionId: _sessionId,
-        images: _privacy.images,
-        tools: _privacy.tools,
-      );
-    }
-    return shareContentForItems(state, keys, sessionId: _sessionId, images: _privacy.images, tools: _privacy.tools);
-  }
+  bool get ready => artifact != null || (!loading && !isEmpty);
 
   /// Messages, tool calls and pictures in scope, for the summary line.
   ({int messages, int tools, int images}) get counts {
@@ -440,9 +369,7 @@ class SharePanelModel extends ChangeNotifier {
         if (keys.contains(item.key)) item,
     ];
     final whole = _scope == ShareScope.whole;
-    final turns = {
-      for (final reply in picked.whereType<AssistantChatItem>()) ?turnOf(state.turns, reply.seq),
-    };
+    final turns = {for (final reply in picked.whereType<AssistantChatItem>()) ?turnOf(state.turns, reply.seq)};
     var tools = 0;
     if (_privacy.tools) {
       for (final item in state.items) {
@@ -470,7 +397,7 @@ class SharePanelModel extends ChangeNotifier {
 
   Future<void> _readHistory() async {
     final sessionId = _sessionId;
-    if (sessionId == null || _replay != null) return;
+    if (sessionId == null) return;
     _historyLoading = true;
     _notify();
     try {
@@ -490,7 +417,6 @@ class SharePanelModel extends ChangeNotifier {
       // Whatever arrived is shared.
     } finally {
       _historyLoading = false;
-      _card = null;
       _notify();
     }
   }
@@ -537,7 +463,6 @@ class SharePanelModel extends ChangeNotifier {
   }
 
   ExportImageLoader? _defaultLoader() {
-    if (_replay case final replay?) return (image) async => replay.assets[image.attachmentId]?.bytes;
     final sessionId = _sessionId;
     if (sessionId == null) return null;
     return (image) => sessionImageBytes(_ref, sessionId, image);
@@ -545,16 +470,6 @@ class SharePanelModel extends ChangeNotifier {
 
   /// The conversation with all of its history.
   Future<ConversationSource> _source() async {
-    if (_replay case final replay?) {
-      final end = replay.state;
-      return ConversationSource(
-        title: replay.share.title,
-        items: end.items,
-        turns: end.turns,
-        commands: end.commands,
-        model: replay.share.model,
-      );
-    }
     await _loadHistory();
     final sessionId = _sessionId!;
     final state = chat;
@@ -634,97 +549,6 @@ class SharePanelModel extends ChangeNotifier {
       _error = appL10n.viewShareOpenFailed;
     }
   });
-
-  // ── 链接 ─────────────────────────────────────────────────────────────────
-
-  LinkExpiry _expiry = LinkExpiry.month;
-  ConversationLink? _link;
-  Object? _linkFor;
-  ({ConversationLink link, Object key})? _stopped;
-  Timer? _stopTimer;
-
-  LinkExpiry get expiry => _expiry;
-
-  set expiry(LinkExpiry value) {
-    if (value == _expiry) return;
-    _expiry = value;
-    _error = null;
-    _notify();
-  }
-
-  /// The link made for what is shared now, at the chosen expiry.
-  ConversationLink? get link => _linkFor == (_contentKey, _expiry) ? _link : null;
-
-  /// A link just stopped, while it can still be brought back.
-  ConversationLink? get stopped => _stopped?.link;
-
-  Future<void> makeLink() => _busy(ShareWork.link, () async {
-    final maker = linkMaker;
-    if (maker == null) return;
-    final key = (_contentKey, _expiry);
-    try {
-      final built = await prepare();
-      if (built.tooLarge) return;
-      final link = await maker.upload(conversationFileBytes(built.file.text), _expiry, title: built.share.title);
-      _shared();
-      HapticFeedback.lightImpact();
-      _link = link;
-      _linkFor = key;
-      _stopped = null;
-      _stopTimer?.cancel();
-    } catch (e) {
-      _error = e is HostedShareException ? e.message : appL10n.viewShareLinkFailed;
-    }
-  });
-
-  /// 「停止分享」: the link stops working once the undo window passes.
-  Future<void> stopLink() async {
-    final maker = linkMaker;
-    final link = this.link;
-    if (maker == null || link == null) return;
-    final key = _linkFor!;
-    await maker.revoke(link);
-    _link = null;
-    _linkFor = null;
-    _stopped = (link: link, key: key);
-    _stopTimer?.cancel();
-    _stopTimer = Timer(maker.undoWindow, () {
-      _stopped = null;
-      _notify();
-    });
-    _notify();
-  }
-
-  /// Takes 「停止分享」 back.
-  Future<void> restoreLink() async {
-    final maker = linkMaker;
-    final stopped = _stopped;
-    if (maker == null || stopped == null) return;
-    _stopTimer?.cancel();
-    await maker.restore(stopped.link);
-    _stopped = null;
-    _link = stopped.link;
-    _linkFor = stopped.key;
-    _notify();
-  }
-
-  Future<void> copyLink() async {
-    final link = this.link;
-    if (link == null) return;
-    await Clipboard.setData(ClipboardData(text: link.url.toString()));
-  }
-
-  Future<void> shareLink() async {
-    final link = this.link;
-    final built = _built;
-    if (link == null || built == null) return;
-    try {
-      await _ref.read(conversationOutProvider).shareText(appL10n.viewShareLinkText(built.share.title, '${link.url}'));
-    } catch (_) {
-      _error = appL10n.viewShareOpenFailed;
-      _notify();
-    }
-  }
 
   // ── 文件 ─────────────────────────────────────────────────────────────────
 

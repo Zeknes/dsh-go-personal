@@ -170,10 +170,7 @@ class _WebHomeState extends ConsumerState<WebHome> {
       NoDshWeb(:final reason) => _NoWeb(reason: reason, handle: _handle),
     };
     return ChatAlertHost(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [page, const LinkHost(), const WebEntryHost()],
-      ),
+      child: Stack(fit: StackFit.expand, children: [page, const LinkHost(), const WebEntryHost()]),
     );
   }
 }
@@ -244,14 +241,6 @@ class _WebEntryHostState extends ConsumerState<WebEntryHost> {
     // Share codes and links open their native pages, as on the native home.
     if (share.shareCodeFile case final file?) {
       ref.read(appLinksProvider).add(Uri.file(file.path));
-      return;
-    }
-    if (share.hostedLink case final link?) {
-      ref.read(appLinksProvider).add(link);
-      return;
-    }
-    if (share.shareLink case final link?) {
-      ref.read(appLinksProvider).add(link.appLink);
       return;
     }
     final request = await ComposeRequest.fromShare(share, maxBytes: maxWebComposeBytes);
