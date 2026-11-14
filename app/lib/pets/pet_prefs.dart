@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../performance/performance_state.dart';
-import 'pet_library.dart';
 import 'pet_state.dart';
 
 /// The pets that ship with the app, in picker order.
@@ -163,7 +162,7 @@ class PetPrefsController extends Notifier<PetPrefs> {
       final pack = prefs.getString(keys.pack);
       // A brought pet stays chosen; removing it here picks the default
       // (UserPetsController.remove).
-      final explicit = pack == noPetId || builtInPets.contains(pack) || (pack != null && isUserPet(pack));
+      final explicit = pack == noPetId || builtInPets.contains(pack) || (pack != null && pack.startsWith('user-'));
       final hidden = prefs.getInt(keys.hidden);
       var zoom = 0.9, y = 0.0;
       try {
