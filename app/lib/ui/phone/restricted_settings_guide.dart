@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
-import '../../pets/overlay_channel.dart';
 import '../../state/app_info.dart';
 import '../../state/phone_state.dart';
 import '../common/capsule_chip.dart';
@@ -135,11 +134,7 @@ class _RestrictedSettingsGuidePageState extends ConsumerState<RestrictedSettings
   void initState() {
     super.initState();
     _lifecycle = AppLifecycleListener(
-      onResume: () => unawaited(
-        widget.target == RestrictedTarget.overlay
-            ? ref.read(petOverlayProvider.notifier).refresh()
-            : ref.read(phoneProvider.notifier).refreshStatus(),
-      ),
+      onResume: () => unawaited(ref.read(phoneProvider.notifier).refreshStatus()),
     );
   }
 
@@ -159,10 +154,7 @@ class _RestrictedSettingsGuidePageState extends ConsumerState<RestrictedSettings
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final overlay = widget.target == RestrictedTarget.overlay;
-    final done = overlay
-        ? ref.watch(petOverlayProvider.select((s) => s.permission.usable))
-        : ref.watch(phoneProvider.select((s) => s.status.a11y.enabled));
+    final done = ref.watch(phoneProvider.select((s) => s.status.a11y.enabled));
     final rom =
         _picked ?? widget.rom ?? RomFamily.of(ref.watch(phoneProvider.select((s) => s.status.device.manufacturer)));
     final guide = RomGuide.forTarget(rom, widget.target);
@@ -214,12 +206,7 @@ class _RestrictedSettingsGuidePageState extends ConsumerState<RestrictedSettings
               Expanded(
                 child: FilledButton(
                   style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                  onPressed: () => overlay
-                      ? _open(
-                          ref.read(petOverlayProvider.notifier).openPermission,
-                          l10n.phoneRestrictedOpenOverlayFailed,
-                        )
-                      : _open(phone.openAccessibilitySettings, l10n.phoneRestrictedOpenAccessibilityFailed),
+                  onPressed: () => _open(phone.openAccessibilitySettings, l10n.phoneRestrictedOpenAccessibilityFailed),
                   child: Text(widget.target.action),
                 ),
               ),
