@@ -17,7 +17,6 @@ import '../chat/widgets/approval_card.dart';
 import '../chat/widgets/question_card.dart';
 import '../theme/motion.dart';
 import '../theme/surfaces.dart';
-import 'companion_chrome.dart';
 
 /// The approval or question her session [sessionId] is waiting on, or nothing.
 /// An approval comes first: the turn can't go on without it. An approval
@@ -156,7 +155,9 @@ class CompanionDeepCards extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final surfaces = DshSurfaces.of(context);
-    final deep = companionDeepGlass(context);
+    final deep = surfaces.glass(GlassTier.sheet).copyWith(
+      fill: const Color(0xC40E2740), fallbackFill: const Color(0xF20E2740), blurSigma: 22, saturation: 1.3,
+    );
     return Theme(
       data: theme.copyWith(
         extensions: [

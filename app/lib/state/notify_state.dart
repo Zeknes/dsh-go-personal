@@ -11,7 +11,6 @@ import '../notify/answer_native_request.dart';
 import '../notify/notify_channel.dart';
 import '../phone/phone_channel.dart';
 import '../phone/phone_approval.dart';
-import '../pets/pet_signals.dart' show petHearAlert, petOnScreenProvider, petEventBusProvider;
 import 'app_info.dart';
 import 'bots_state.dart';
 import 'chat_state.dart';
@@ -216,23 +215,21 @@ final alertTimingProvider = Provider<({Duration announce, Duration reconcile})>(
   (ref) => (announce: const Duration(milliseconds: 800), reconcile: const Duration(seconds: 3)),
 );
 
-enum AlertDelivery { none, banner, pet, system }
+enum AlertDelivery { none, banner, system }
 
-/// System notification in the background, a banner in the foreground — or
-/// the pet's bubble when it is on screen ([petOnScreen]: one reminder, not
-/// two) — and nothing for the conversation already on screen.
+/// System notification in the background, a banner in the foreground, and
+/// nothing for the conversation already on screen.
 AlertDelivery deliveryFor(
   ChatAlert alert, {
   required NotifyPrefs prefs,
   required bool foreground,
   ChatTarget? viewed,
-  bool petOnScreen = false,
 }) {
   if (!prefs.allows(alert.kind)) return AlertDelivery.none;
   // A lifecycle listener may still see the last foreground viewed target.
   if (!foreground) return AlertDelivery.system;
   if (viewed != null && viewed.host == alert.host && viewed.sessionId == alert.sessionId) return AlertDelivery.none;
-  return petOnScreen ? AlertDelivery.pet : AlertDelivery.banner;
+  return AlertDelivery.banner;
 }
 
 NotifyPost postFor(ChatAlert alert) => NotifyPost(
@@ -508,10 +505,6 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
         if (attached()) _cancelPhonePrompt(host: host);
       },
       companionConnection: connection,
-      isCompanionAttached: attached,
-      onCompanionSignal: (delivery) {
-        if (attached()) scope.read(petEventBusProvider).companionSignal(delivery);
-      },
       skipApproval: (sessionId) =>
           attached() && scope.exists(chatProvider(sessionId)) && scope.read(chatProvider(sessionId)).autoApprove,
       announceDelay: timing.announce,
@@ -723,13 +716,9 @@ class ChatAlertsController extends Notifier<ChatAlert?> {
       prefs: prefs,
       foreground: foreground,
       viewed: ref.read(viewedChatProvider),
-      petOnScreen: ref.read(petOnScreenProvider),
     );
-    // The pet hears every alert (it moves for the one on screen too); it
-    // speaks up for those that would have reached the person.
-    petHearAlert(ref, alert, bubble: delivery == AlertDelivery.pet || delivery == AlertDelivery.system);
     switch (delivery) {
-      case AlertDelivery.none || AlertDelivery.pet:
+      case AlertDelivery.none:
         return;
       case AlertDelivery.banner:
         _banner = alert;
