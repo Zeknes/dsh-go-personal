@@ -593,8 +593,18 @@ class PetMoodController extends Notifier<PetMood> {
       _events.add(e);
       _reduce();
     });
-    ref.listen(petSignalsProvider, (_, _) => _reduce());
-    ref.listen(petTimingsProvider, (_, _) => _reduce());
+    ref.listen(
+      petSignalsProvider,
+      (_, _) => scheduleMicrotask(() {
+        if (ref.mounted) _reduce();
+      }),
+    );
+    ref.listen(
+      petTimingsProvider,
+      (_, _) => scheduleMicrotask(() {
+        if (ref.mounted) _reduce();
+      }),
+    );
     ref.onDispose(() {
       _timer?.cancel();
       unawaited(sub.cancel());

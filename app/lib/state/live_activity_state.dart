@@ -8,7 +8,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../notify/live_activity.dart';
 import '../pets/pet_signals.dart';
 import '../pets/pet_state.dart';
+import 'chat_state.dart';
+import 'hosts_state.dart';
 import 'notify_state.dart';
+import 'sessions_state.dart';
 
 export '../notify/live_activity.dart';
 
@@ -19,14 +22,19 @@ final _liveTitlesProvider = Provider<Map<PetTarget, String>>((ref) => <PetTarget
 /// signals, so it sees exactly what the pet sees.
 final liveActivityProvider = Provider<LiveActivity?>((ref) {
   final signals = ref.watch(petSignalsProvider);
+  final session = ref.watch(currentSessionProvider);
+  final host = ref.watch(activeHostProvider);
+  final focus = session == null || !ref.exists(chatProvider(session))
+      ? null
+      : ref.watch(chatProvider(session).select((chat) => petFocusOf(host, session, chat)));
   final titles = ref.watch(_liveTitlesProvider);
-  learnLiveTitles(titles, signals.runs, focus: signals.focus);
+  learnLiveTitles(titles, signals.runs, focus: focus);
   final prefs = ref.watch(notifyPrefsProvider);
   return liveActivityOf(
     pet: ref.watch(petStateProvider),
     runs: signals.runs,
     pending: signals.pending,
-    focus: signals.focus,
+    focus: focus,
     titles: titles,
     showDone: prefs.done,
     showFailed: prefs.failed,
