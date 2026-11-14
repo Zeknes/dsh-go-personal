@@ -413,7 +413,7 @@ GPL / LGPL 组件的对应源码：proot、libtalloc、libandroid-shmem 的二�
 
 ### Unicode Character Database 15.0.0（Unicode 数据许可）
 
-宠物 ZIP 文件名去重使用从 CPython 3.12 / Unicode 15.0.0 生成的 NFC 与 full casefold 数据表；生成脚本为 `app/tool/generate_pet_validation_data.py`，表为 `app/lib/pets/pet_unicode_data.g.dart`。未复制 CPython 实现代码。
+宠物 ZIP 文件名去重使用从 CPython 3.12 / Unicode 15.0.0 生成的 NFC 与 full casefold 数据表；生成脚本为 `app/tool/generate_pet_validation_data.py`，表为 `app/tool/pet_unicode_data.g.dart`。未复制 CPython 实现代码。
 
 Copyright © 1991-2026 Unicode, Inc.
 

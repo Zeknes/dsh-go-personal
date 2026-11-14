@@ -5,7 +5,7 @@ import { WorkshopArchive, inflate, nameAlias, strictJson } from '../src/workshop
 import { validatePack, validatePet } from '../src/workshop-pack';
 import { validatePng } from '../src/workshop-png';
 import { companion, metaFor, pet, petManifest, png, zip } from './workshop-fixtures';
-const fixture = (name: string) => JSON.parse(readFileSync(new URL(`../../../app/test/pets/fixtures/${name}.json`, import.meta.url), 'utf8'));
+const fixture = (name: string) => JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url), 'utf8'));
 const accepted = (f: () => unknown) => { try { f(); return true; } catch { return false; } };
 
 describe('same synthetic fixture corpus as current App validators', () => {

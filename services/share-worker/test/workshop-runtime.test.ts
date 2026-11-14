@@ -26,7 +26,7 @@ it('enforces full PNG/ZIP/DEFLATE bounds inside local workerd', async () => {
     bundle: true, write: false, format: 'esm', platform: 'browser', target: 'es2022', external: ['node:zlib'] });
   const runtime = new Miniflare(convertV4MiniflareOptions({ modules: true, compatibilityDate: '2026-10-01', compatibilityFlags: ['nodejs_compat'], script: bundle.outputFiles[0]!.text }));
   try {
-    const corpus = JSON.parse(readFileSync(new URL('../../../app/test/pets/fixtures/pet-png-v2.json', import.meta.url), 'utf8'));
+    const corpus = JSON.parse(readFileSync(new URL('./fixtures/pet-png-v2.json', import.meta.url), 'utf8'));
     for (const c of corpus.cases) {
       const response = await runtime.dispatchFetch('https://workshop.invalid/png', { method: 'POST', body: Buffer.from(c.base64, 'base64') });
       expect((await response.json() as any).ok, c.name).toBe(c.accepted);

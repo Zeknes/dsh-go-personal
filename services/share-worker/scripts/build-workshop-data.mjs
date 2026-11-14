@@ -10,7 +10,7 @@ const worker = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export function writeWorkshopData(root = worker) {
   const repo = resolve(root, '../..');
   const rules = readFileSync(resolve(repo, 'app/tool/pet-pack.rules.json'));
-  const dart = readFileSync(resolve(repo, 'app/lib/pets/pet_unicode_data.g.dart'), 'utf8');
+  const dart = readFileSync(resolve(repo, 'app/tool/pet_unicode_data.g.dart'), 'utf8');
   const encoded = [...dart.split('const petUnicodeData =')[1].matchAll(/'([A-Za-z0-9+/=]+)'/g)].map(x => x[1]).join('');
   const hash = value => createHash('sha256').update(value).digest('hex');
   const expected = /petUnicodeDataSha256 = '([a-f0-9]{64})'/.exec(dart)?.[1];
