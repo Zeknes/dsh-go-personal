@@ -4,8 +4,6 @@ import 'dart:convert';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:dsh_app/l10n/l10n.dart';
 import 'package:dsh_app/phone/phone_channel.dart';
-import 'package:dsh_app/pets/pet_signals.dart';
-import 'package:dsh_app/pets/pet_state.dart';
 import 'package:dsh_app/state/chat_state.dart';
 import 'package:dsh_app/state/composer_insert.dart';
 import 'package:dsh_app/state/connection_state.dart';
@@ -31,6 +29,7 @@ class _Local extends LocalConnectionController {
   @override
   Future<HostConnection?> build() async => connection;
 }
+
 class _Host extends ActiveHostController {
   @override
   HostRef build() => HostRef.local;
@@ -61,17 +60,27 @@ void main() {
   final catalogGeneration = Expando<Object>();
 
   Future<void> drainCatalogs(WidgetTester tester, SyncHarness h) async {
-    expect(identical(h.client.mux.generation, catalogGeneration[h]), isTrue,
-      reason: 'Catalog cleanup must not read a replacement connection generation');
+    expect(
+      identical(h.client.mux.generation, catalogGeneration[h]),
+      isTrue,
+      reason: 'Catalog cleanup must not read a replacement connection generation',
+    );
     expect(h.container.exists(skillsProvider('S')), isTrue);
     var done = false;
     Object? error;
     StackTrace? stack;
-    final completion = h.container.read(skillsProvider('S').future).then<void>((_) { done = true; }, onError: (Object value, StackTrace trace) {
-      error = value;
-      stack = trace;
-      done = true;
-    });
+    final completion = h.container
+        .read(skillsProvider('S').future)
+        .then<void>(
+          (_) {
+            done = true;
+          },
+          onError: (Object value, StackTrace trace) {
+            error = value;
+            stack = trace;
+            done = true;
+          },
+        );
     await settleIo(tester, () => done);
     await completion;
     if (error != null) Error.throwWithStackTrace(error!, stack!);
@@ -102,24 +111,35 @@ void main() {
     late HostConnection connection;
     SessionFollowEpoch? observedEpoch;
     final overrides = [
-      petScopedStateProvider.overrideWith((ref, scope) => const PetState()),
       // These are plain-text phone-route tests, not media generation tests.
       mediaPluginProvider.overrideWithValue(MediaPluginState.absent),
       for (final override in ui.overrides)
-        if (override.origin != activeConnectionProvider && override.origin != chatProvider &&
-            override.origin != localConnectionProvider) override,
+        if (override.origin != activeConnectionProvider &&
+            override.origin != chatProvider &&
+            override.origin != localConnectionProvider)
+          override,
       activeHostProvider.overrideWith(_Host.new),
       localConnectionProvider.overrideWith(() => _Local(connection)),
     ];
-    final h = await tester.runAsync(() => HttpOverrides.runWithHttpOverrides(
-      () => SyncHarness.start(overrides: overrides, observe: (event) {
-        if (event is SessionSnapshotEvent) observedEpoch = event.followEpoch;
-      }), RealSyncHttp()));
+    final h = await tester.runAsync(
+      () => HttpOverrides.runWithHttpOverrides(
+        () => SyncHarness.start(
+          overrides: overrides,
+          observe: (event) {
+            if (event is SessionSnapshotEvent) observedEpoch = event.followEpoch;
+          },
+        ),
+        RealSyncHttp(),
+      ),
+    );
     if (h == null) fail('Loopback startup failed; see the original runAsync exception');
     try {
       connection = HostConnection(client: h.client, isLocal: true);
       await h.container.read(localConnectionProvider.future);
-      h.host.handlers['skills/list'] = (_) => {'ok': true, 'value': {'skills': <Object?>[]}};
+      h.host.handlers['skills/list'] = (_) => {
+        'ok': true,
+        'value': {'skills': <Object?>[]},
+      };
       catalogGeneration[h] = h.client.mux.generation!;
       final skills = h.container.listen(skillsProvider('S'), (_, _) {});
       releaseCatalogs[h] = skills.close;
@@ -136,10 +156,17 @@ void main() {
       var activationDone = false;
       bool? supported;
       final follows = h.follows.length;
-      final activation = h.client.activateSessionForInteraction('S', epoch: epoch,
+      final activation = h.client.activateSessionForInteraction(
+        'S',
+        epoch: epoch,
         allowed: () => identical(h.client.mux.generation, epoch.generation),
-        onActivationChecked: (value) { supported = value; });
-      final completed = activation.then((_) { activationDone = true; });
+        onActivationChecked: (value) {
+          supported = value;
+        },
+      );
+      final completed = activation.then((_) {
+        activationDone = true;
+      });
       await settleIo(tester, () => activationDone);
       await completed;
       // No supported Host release was established. A failed HTTP read also
@@ -153,19 +180,33 @@ void main() {
       try {
         await disposeHarness(tester, h);
       } catch (cleanupError, cleanupStack) {
-        FlutterError.reportError(FlutterErrorDetails(exception: cleanupError, stack: cleanupStack,
-          context: ErrorDescription('while cleaning up the route composer fixture')));
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: cleanupError,
+            stack: cleanupStack,
+            context: ErrorDescription('while cleaning up the route composer fixture'),
+          ),
+        );
       }
       Error.throwWithStackTrace(error, stack);
     }
   }
 
   PreparedPhoneSkill selection(SyncHarness h, {String invocation = _invocation}) => PreparedPhoneSkill(
-    origin: PhoneSkillUseOrigin.capture(h.container, 'S')!, channel: PhoneChannel(), text: _text,
-    ready: PhoneSkillReplayReady.parse({'kind': 'ready', 'revision': _revision,
-      'invocation': invocation, 'parameterNames': []})!);
+    origin: PhoneSkillUseOrigin.capture(h.container, 'S')!,
+    channel: PhoneChannel(),
+    text: _text,
+    ready: PhoneSkillReplayReady.parse({
+      'kind': 'ready',
+      'revision': _revision,
+      'invocation': invocation,
+      'parameterNames': [],
+    })!,
+  );
 
-  testWidgets('prepared route card never enters ordinary input or saved draft and queues through real Chat', (tester) async {
+  testWidgets('prepared route card never enters ordinary input or saved draft and queues through real Chat', (
+    tester,
+  ) async {
     messenger.setMockMethodCallHandler(_method, (_) async => {'kind': 'discarded'});
     final h = await open(tester);
     try {
@@ -187,7 +228,9 @@ void main() {
       expect(h.cancelledBackendRuns, isEmpty);
       expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, 'my ordinary draft');
       expect(h.container.read(draftStoreProvider).drafts['S']?.text, 'my ordinary draft');
-    } finally { await disposeHarness(tester, h); }
+    } finally {
+      await disposeHarness(tester, h);
+    }
   });
 
   testWidgets('changing selection after preparation cannot silently restore old session or send', (tester) async {
@@ -205,8 +248,12 @@ void main() {
       expect(h.container.read(currentSessionProvider), isNull);
       expect(find.text(_text), findsNothing);
       expect(h.boundary, isEmpty);
-      expect(discarded, [{'invocation': _invocation}]);
-    } finally { await disposeHarness(tester, h); }
+      expect(discarded, [
+        {'invocation': _invocation},
+      ]);
+    } finally {
+      await disposeHarness(tester, h);
+    }
   });
 
   testWidgets('replacing an unconsumed typed insert discards just its original invocation', (tester) async {
@@ -224,10 +271,16 @@ void main() {
         pending.read(composerInsertProvider.notifier).request(ComposerInsert.phoneRoute(selection(h)));
         pending.read(composerInsertProvider.notifier).request(const ComposerInsert.skill('plain', sessionId: 'S'));
         await tester.pump();
-        expect(discarded, [{'invocation': _invocation}]);
+        expect(discarded, [
+          {'invocation': _invocation},
+        ]);
         expect(pending.read(composerInsertProvider), const ComposerInsert.skill('plain', sessionId: 'S'));
         expect(h.boundary, isEmpty);
-      } finally { pending.dispose(); }
-    } finally { await disposeHarness(tester, h); }
+      } finally {
+        pending.dispose();
+      }
+    } finally {
+      await disposeHarness(tester, h);
+    }
   });
 }

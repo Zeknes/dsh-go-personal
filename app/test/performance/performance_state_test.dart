@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import 'package:dsh_app/performance/performance_state.dart';
-import 'package:dsh_app/pets/pet_prefs.dart';
-import 'package:dsh_app/pets/pet_state.dart';
 import 'package:dsh_app/state/settings_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,9 +10,8 @@ import 'support.dart';
 
 Future<void> loaded(ProviderContainer container) async {
   container.read(settingsProvider);
-  container.read(petPrefsProvider);
   for (var i = 0; i < 40; i++) {
-    if (container.read(settingsProvider).loaded && container.read(petPrefsProvider).loaded) return;
+    if (container.read(settingsProvider).loaded) return;
     await Future<void>.delayed(Duration.zero);
   }
   fail('Preferences did not finish loading');
@@ -108,11 +105,8 @@ void main() {
       await loaded(container);
       expect(container.read(settingsProvider).autoStartLocal, isFalse);
       expect(container.read(settingsProvider).autoStartLocalExplicit, isFalse);
-      expect(container.read(petPrefsProvider).packId, noPetId);
-      expect(container.read(petPrefsProvider).packExplicit, isFalse);
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey('auto_start_local'), isFalse);
-      expect(prefs.containsKey(PetPrefsController.keys.pack), isFalse);
     });
 
     test('existing explicit on choices survive a low device and thermal changes', () async {
@@ -121,9 +115,7 @@ void main() {
       await loaded(container);
       channel.events.add(snapshot(DeviceTier.low, hot: true, sequence: 2));
       expect(container.read(settingsProvider).autoStartLocal, isTrue);
-      expect(container.read(petPrefsProvider).packId, 'whale-girl');
       expect(container.read(settingsProvider).autoStartLocalExplicit, isTrue);
-      expect(container.read(petPrefsProvider).packExplicit, isTrue);
     });
 
     test('existing explicit off choices survive the full mode on a high device', () async {
@@ -135,7 +127,6 @@ void main() {
       start(tier: DeviceTier.high);
       await loaded(container);
       expect(container.read(settingsProvider).autoStartLocal, isFalse);
-      expect(container.read(petPrefsProvider).enabled, isFalse);
       expect(container.read(performanceDefaultsProvider).blur, isTrue);
     });
 
@@ -145,10 +136,8 @@ void main() {
       expect(container.read(settingsProvider).autoStartLocal, isTrue);
       channel.events.add(snapshot(DeviceTier.high, hot: true, sequence: 2));
       expect(container.read(settingsProvider).autoStartLocal, isFalse);
-      expect(container.read(petPrefsProvider).packId, noPetId);
       channel.events.add(snapshot(DeviceTier.high, sequence: 3));
       expect(container.read(settingsProvider).autoStartLocal, isTrue);
-      expect(container.read(petPrefsProvider).packId, defaultPetId);
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey('auto_start_local'), isFalse);
       expect(prefs.containsKey('pet.pack'), isFalse);
@@ -159,15 +148,13 @@ void main() {
       await loaded(container);
       channel.events.add(snapshot(DeviceTier.high, hot: true, sequence: 2));
       await container.read(settingsProvider.notifier).setAutoStartLocal(true);
-      await container.read(petPrefsProvider.notifier).setPack('whale-girl');
       await container.read(performancePrefsProvider.notifier).setMode(PerformanceMode.light);
       channel.events.add(snapshot(DeviceTier.high, sequence: 3));
       expect(container.read(settingsProvider).autoStartLocal, isTrue);
-      expect(container.read(petPrefsProvider).packId, 'whale-girl');
       expect(container.read(performanceDefaultsProvider).lightweight, isTrue);
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getBool('auto_start_local'), isTrue);
-      expect(prefs.getString('pet.pack'), 'whale-girl');
+      expect(prefs.containsKey('pet.pack'), isFalse);
     });
 
     test('startup settings remain loading while device facts are pending', () async {
@@ -249,7 +236,6 @@ void main() {
       expect(container.read(performanceDefaultsProvider).blur, isFalse);
       expect(container.read(performanceDefaultsProvider).reduceMotion, isTrue);
       expect(container.read(settingsProvider).autoStartLocal, isTrue);
-      expect(container.read(petPrefsProvider).packId, 'whale-girl');
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.containsKey('performance.blur'), isFalse);
       expect(prefs.containsKey('performance.animations'), isFalse);

@@ -1,4 +1,4 @@
-package io.github.ccch1mneyyy.dsh_app.pet
+package io.github.ccch1mneyyy.dsh_app.overlay
 
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -15,7 +15,7 @@ data class SafeArea(
 
 enum class Side { LEFT, RIGHT }
 
-/** Where the pet rests: an edge, and how far down the usable height (0 top … 1 bottom). */
+/** Where the overlay rests: an edge, and how far down the usable height (0 top … 1 bottom). */
 data class Dock(val side: Side, val yFraction: Float) {
     companion object {
         /** First run: right edge, a little below the middle, clear of the app's header controls. */
@@ -35,7 +35,7 @@ data class ScreenRect(val left: Int, val top: Int, val right: Int, val bottom: I
     fun intersects(o: ScreenRect) = left < o.right && o.left < right && top < o.bottom && o.top < bottom
 }
 
-/** Which way a bubble's tail points (towards the pet): [DOWN] when the bubble is above it. */
+/** Which way a bubble's tail points (towards the overlay): [DOWN] when the bubble is above it. */
 enum class Tail { DOWN, UP, LEFT, RIGHT }
 
 /**
@@ -51,7 +51,7 @@ data class BubblePlacement(val pos: WindowPos, val w: Int, val h: Int, val tailA
  * usable height, so it survives rotation and a different screen size.
  */
 object EdgeSnap {
-    /** A release faster than this (px/s) throws the pet to the side it was thrown towards. */
+    /** A release faster than this (px/s) throws the overlay to the side it was thrown towards. */
     const val FLING_PX_PER_S = 1200f
 
     fun minX(area: SafeArea, margin: Int) = area.left + margin
@@ -84,39 +84,11 @@ object EdgeSnap {
         return WindowPos(x, y)
     }
 
-    /**
-     * Where the rest frame docks for [dock] when the window may take any frame in [reach] there
-     * (around the rest origin, [PetFrames.reach]): all of it inside the margins, so a grown frame
-     * never has to move the pet. With reach = the rest frame, [position] as it always was.
-     */
-    fun position(dock: Dock, reach: FramePx, area: SafeArea, margin: Int): WindowPos =
-        PetFrames.restOf(position(dock, reach.width, reach.height, area, margin), reach)
-
-    /**
-     * The dock for a rest frame ([restW] wide) released at [rest]: the side by the rest frame, as
-     * always; the height as a share of the range [position] gives [reach].
-     */
-    fun dockFor(rest: WindowPos, restW: Int, reach: FramePx, area: SafeArea, margin: Int, velocityX: Float = 0f): Dock {
-        val at = PetFrames.windowAt(rest, reach)
-        val f = dockFor(at.x, at.y, reach.width, reach.height, area, margin).yFraction
-        return Dock(sideFor(rest.x, restW, area, velocityX), f)
-    }
-
     /** While dragging: follow the finger, but keep the whole pet on screen. */
     fun clampDrag(x: Int, y: Int, w: Int, h: Int, area: SafeArea): WindowPos = WindowPos(
         x.coerceIn(0, maxOf(0, area.screenW - w)),
         y.coerceIn(area.top, maxOf(area.top, area.screenH - area.bottom - h)),
     )
-
-    /**
-     * While held: the rest frame follows the finger from [restStart] by ([dx], [dy]); what stays whole
-     * on screen is the window, [frame], which reaches past the rest frame around the lifted pose.
-     * Returns the window's position.
-     */
-    fun carry(restStart: WindowPos, dx: Int, dy: Int, frame: FramePx, area: SafeArea): WindowPos {
-        val at = PetFrames.windowAt(restStart, frame)
-        return clampDrag(at.x + dx, at.y + dy, frame.width, frame.height, area)
-    }
 
     /**
      * Where a bubble goes, as the chat page places it (docs/design/pets.md §2.7): above the picture

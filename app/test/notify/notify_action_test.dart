@@ -1,5 +1,4 @@
-import 'package:dsh_app/pets/pet_signals.dart';
-import 'package:dsh_app/pets/pet_mood.dart';
+import 'package:dsh_app/state/task_alerts.dart';
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/hosts_state.dart';
 import 'package:dsh_app/state/notify_state.dart';
@@ -204,10 +203,8 @@ void main() {
   });
 
   test('pet answer checks session, delivery token and single-use decisions', () async {
-    final events = <PetEvent>[];
-    final sub = container.read(petEventBusProvider).events.listen(events.add);
     await announce();
-    final token = events.single.ask!.token!;
+    final token = container.read(taskAlertsProvider).values.last.petToken!;
     final controller = container.read(chatAlertsProvider.notifier);
     expect(
       await controller.answerFromPet(
@@ -256,14 +253,11 @@ void main() {
       ),
       NotifyActionResult.gone,
     );
-    await sub.cancel();
   });
 
   test('reconnect invalidates the old pet approval even when event id is redelivered', () async {
-    final events = <PetEvent>[];
-    final sub = container.read(petEventBusProvider).events.listen(events.add);
     await announce();
-    final token = events.single.ask!.token!;
+    final token = container.read(taskAlertsProvider).values.last.petToken!;
     remote.emit(const HostReadyEvent('next-client', '/home'));
     await announce();
     expect(
@@ -279,7 +273,6 @@ void main() {
       NotifyActionResult.gone,
     );
     expect(remoteClient.replies, isEmpty);
-    await sub.cancel();
   });
 
   test('pet shows all tool arguments and rejects abbreviated or sensitive actions', () {
@@ -323,11 +316,9 @@ void main() {
         ),
       ],
     );
-    final events = <PetEvent>[];
-    final sub = container.read(petEventBusProvider).events.listen(events.add);
     remote.emit(const UserQuestionRequestedEvent(q));
     await settle();
-    final token = events.single.ask!.token!;
+    final token = container.read(taskAlertsProvider).values.last.petToken!;
     final controller = container.read(chatAlertsProvider.notifier);
     expect(
       await controller.answerFromPet(remoteHost, 'q1', sessionId: 'r1', token: token, choice: 'Other'),
@@ -349,7 +340,6 @@ void main() {
         },
       },
     });
-    await sub.cancel();
   });
 
   test('question option descriptions and plan reviews require opening the full chat', () {

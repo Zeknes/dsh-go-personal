@@ -1,4 +1,4 @@
-package io.github.ccch1mneyyy.dsh_app.pet
+package io.github.ccch1mneyyy.dsh_app.overlay
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -156,7 +156,7 @@ class EdgeSnapTest {
             val inward = if (side == Side.LEFT) 1 else -1
             // Out to the edge (the margin) or any way inwards.
             for ((dx, dy) in listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1, m to m, -m to -m, 300 * inward to -53)) {
-                assertEquals(WindowPos(rest.x + dx, rest.y + dy), EdgeSnap.carry(rest, dx, dy, FramePx(0, 0, w, h), area))
+                assertEquals(WindowPos(rest.x + dx, rest.y + dy), EdgeSnap.clampDrag(rest.x + dx, rest.y + dy, w, h, area))
             }
         }
     }

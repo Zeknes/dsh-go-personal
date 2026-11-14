@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:dsh_app/companion/companion_signals.dart';
 import 'package:dsh_app/l10n/l10n.dart';
 import 'package:dsh_app/notify/chat_alerts.dart';
-import 'package:dsh_app/pets/pet_signals.dart';
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/hosts_state.dart';
 import 'package:dsh_client/dsh_client.dart';
@@ -343,25 +342,6 @@ void main() {
     gate.setConsent(other, const CompanionSignalConsent(state: true));
     final token = gate.openIngress(other)!;
     expect(deliveries.single.receive(gate, token), CompanionSignalAdmission.stale);
-  });
-  test('independent companion bus never invokes legacy PetEvent text lane', () async {
-    source.outcome = _outcome(20, 'completed');
-    await edge(true);
-    await edge(false);
-    final bus = PetEventBus();
-    var legacy = 0, metadata = 0;
-    final oldSub = bus.events.listen((_) {
-      legacy++;
-    });
-    final newSub = bus.companionSignals.listen((_) {
-      metadata++;
-    });
-    bus.companionSignal(deliveries.single);
-    expect(metadata, 1);
-    expect(legacy, 0);
-    await oldSub.cancel();
-    await newSub.cancel();
-    bus.dispose();
   });
   test('tracker disposal inside attached predicate cannot publish metadata', () async {
     source.outcome = _outcome(20, 'completed');

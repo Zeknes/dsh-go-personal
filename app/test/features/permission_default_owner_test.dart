@@ -1,5 +1,3 @@
-import 'package:dsh_app/pets/pet_overlay_actions.dart';
-import 'package:dsh_app/pets/pet_state.dart';
 import 'package:dsh_app/runtime/runtime_state.dart';
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/hosts_state.dart';
@@ -9,7 +7,6 @@ import 'package:dsh_app/ui/chat/widgets/plus_panel.dart';
 import 'package:dsh_app/ui/features/permission_page.dart';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -75,7 +72,6 @@ void main() {
               localRuntimeProvider.overrideWith(
                 () => FakeRuntime(LocalRuntimeState(loaded: true, status: runningStatus)),
               ),
-              petHostChoicesProvider.overrideWithValue(const [PetHostChoice(HostRef.local, '本机')]),
             ],
           ),
         );
@@ -92,12 +88,7 @@ void main() {
           tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
           tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
           tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-          expect(
-            await container
-                .read(petOverlayActionsProvider)
-                .handle(MethodCall('switchHost', {'host': HostRef.local.encode()})),
-            isTrue,
-          );
+          container.read(activeHostProvider.notifier).select(HostRef.local);
           tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
           tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
           tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);

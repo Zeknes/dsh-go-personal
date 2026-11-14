@@ -3,8 +3,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:dsh_app/pets/pet_signals.dart';
-import 'package:dsh_app/pets/pet_state.dart';
 import 'package:dsh_app/state/chat_state.dart';
 import 'package:dsh_app/state/composer_quote.dart';
 import 'package:dsh_app/state/connection_state.dart';
@@ -47,7 +45,6 @@ class _QuoteFlow {
     mockClipboard(tester);
     final sessions = _QueuedCreate();
     final overrides = <Override>[
-      petScopedStateProvider.overrideWith((ref, scope) => const PetState()),
       for (final override in ChatHarness().overrides)
         if (override.origin != activeConnectionProvider &&
             override.origin != chatProvider &&

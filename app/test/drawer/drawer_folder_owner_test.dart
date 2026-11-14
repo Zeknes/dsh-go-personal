@@ -2,9 +2,7 @@
 import 'dart:convert';
 
 import 'package:dsh_app/l10n/l10n.dart';
-import 'package:dsh_app/pets/pet_overlay_actions.dart';
 import 'package:dsh_app/ui/shell/drawer/drawer_filter_bar.dart';
-import 'package:flutter/services.dart';
 import 'package:dsh_app/runtime/runtime_state.dart';
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/drawer_view_state.dart';
@@ -144,14 +142,8 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-    // Android's floating pet is available after Home backgrounds the app.
-    // Use its real action handler; it changes Host without popping the sheet.
-    expect(
-      await container
-          .read(petOverlayActionsProvider)
-          .handle(MethodCall('switchHost', {'host': HostRef.local.encode()})),
-      isTrue,
-    );
+    // Switch hosts while the sheet remains open.
+    container.read(activeHostProvider.notifier).select(HostRef.local);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);

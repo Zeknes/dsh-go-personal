@@ -2,8 +2,6 @@
 // controller, draft store and loopback HTTP/WS path remain real.
 import 'dart:io';
 
-import 'package:dsh_app/pets/pet_signals.dart';
-import 'package:dsh_app/pets/pet_state.dart';
 import 'package:dsh_app/state/chat_state.dart';
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/draft_store.dart';
@@ -52,7 +50,6 @@ Future<SyncHarness> beginFirstSend(WidgetTester tester, {FakeSessions? sessions,
   final ui = ChatHarness(created: 'S');
   final overrides = [
     // Pet state is unrelated to the composer wait and stays read-only here.
-    petScopedStateProvider.overrideWith((ref, scope) => const PetState()),
     for (final override in ui.overrides)
       if (override.origin != activeConnectionProvider &&
           override.origin != chatProvider &&

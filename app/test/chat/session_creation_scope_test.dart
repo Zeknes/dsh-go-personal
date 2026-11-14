@@ -4,8 +4,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dsh_app/l10n/l10n.dart';
-import 'package:dsh_app/pets/pet_signals.dart';
-import 'package:dsh_app/pets/pet_state.dart';
 import 'package:dsh_app/state/chat_state.dart';
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/draft_store.dart';
@@ -58,7 +56,6 @@ class _CreationHarness {
     final ui = ChatHarness();
     final sessions = _HeldSessions();
     final overrides = [
-      petScopedStateProvider.overrideWith((ref, scope) => const PetState()),
       for (final override in ui.overrides)
         if (override.origin != activeConnectionProvider &&
             override.origin != chatProvider &&

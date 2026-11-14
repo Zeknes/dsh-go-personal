@@ -1,7 +1,7 @@
+import 'package:dsh_app/state/task_alerts.dart';
+
 import 'dart:async';
 
-import 'package:dsh_app/pets/pet_mood.dart';
-import 'package:dsh_app/pets/pet_signals.dart';
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/hosts_state.dart';
 import 'package:dsh_app/state/notify_state.dart';
@@ -55,8 +55,6 @@ void main() {
   late FakeNotifyChannel channel;
   late ProviderContainer container;
   late StreamSubscription<HostEvent> hostEvents;
-  late StreamSubscription<PetEvent> petEvents;
-  late List<PetEvent> events;
   const remote = HostRef.ssh('lab');
   const approval = ApprovalRequest(eventId: 'e1', sessionId: 's1', toolName: 'bash', callId: 'c1');
   const question = UserQuestionRequest(
@@ -104,14 +102,11 @@ void main() {
     );
     container.listen(chatAlertsProvider, (_, _) {});
     container.read(appForegroundProvider.notifier).set(false);
-    events = [];
-    petEvents = container.read(petEventBusProvider).events.listen(events.add);
     await settle();
   });
 
   tearDown(() async {
     container.dispose();
-    await petEvents.cancel();
     await hostEvents.cancel();
     await channel.actionController.close();
     await channel.tapController.close();
@@ -127,7 +122,7 @@ void main() {
   Future<int> announce({bool questionOnly = false}) async {
     source.emit(questionOnly ? const UserQuestionRequestedEvent(question) : const ApprovalRequestedEvent(approval));
     await settle();
-    return events.last.ask!.token!;
+    return container.read(taskAlertsProvider).values.last.petToken!;
   }
 
   Future<NotifyActionResult> answer(int token, {bool questionOnly = false}) => container
