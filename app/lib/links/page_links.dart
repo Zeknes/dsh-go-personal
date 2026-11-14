@@ -15,7 +15,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../ui/companion/companion_page.dart';
 import '../ui/features/feature_catalog.dart';
 import '../ui/settings/index/settings_pages.dart';
 import 'app_links.dart';
@@ -29,9 +28,6 @@ const pageLinkHost = 'open';
 /// ([SettingsIndex.linkIds]).
 const catalogPageLinks = <String>{'schedules', 'cordis', 'agent-team', 'ds-bot', 'workspaces'};
 
-/// 伙伴小屋: the home-screen widget opens it (android companion/CompanionWidget.kt).
-const companionPageLink = 'companion';
-
 /// Pages the entry point adds, by id: pages under ui/ that this file may not
 /// import itself (docs/architecture.md, 目录).
 final _registeredPages = <String, Widget Function()>{};
@@ -44,7 +40,6 @@ void registerPageLink(String id, Widget Function() page) => _registeredPages[id]
 Set<String> get pageLinkIds => {
   ...SettingsIndex.linkIds,
   ...catalogPageLinks,
-  companionPageLink,
   ..._registeredPages.keys,
 };
 
@@ -63,7 +58,6 @@ String? pageLinkId(Uri uri) {
 /// the chat, as 全部功能 passes it.
 Widget? pageForId(String id, String? sessionId) {
   if (settingsPageForLink(id, sessionId: sessionId) case final page?) return page;
-  if (id == companionPageLink) return const CompanionPage();
   if (_registeredPages[id] case final page?) return page();
   if (!catalogPageLinks.contains(id)) return null;
   for (final section in featureSections) {
