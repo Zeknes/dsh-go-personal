@@ -50,6 +50,36 @@ class RuntimeConsumers(unittest.TestCase):
         bad.write_text('{"schema": 99}')
         self.assertNotEqual(self.run_python(code, bad).returncode, 0)
 
+    def test_host_checks_patch_series_order_and_pruned_metadata(self):
+        text = (ROOT / 'runtime/test-host.sh').read_text()
+        code = heredoc(text, 'python3 -I - "$ROOT" "$HERE/patches/pins.json" "$MANIFEST" <<\'PY\' &&', '\nPY\n')
+        code = code.split('\n', 1)[1]
+        root = self.root / 'guest'
+        target = root / 'opt/dsh/node_modules/example.js'
+        target.parent.mkdir(parents=True)
+        target.write_bytes(b'final')
+        bridge = root / 'opt/dsh-go/dsh-go-bridge/lib/client.js'
+        bridge.parent.mkdir(parents=True)
+        bridge.write_text('')
+        overlay = root / 'etc/dsh-app/dsh-web.patch.yml'
+        overlay.parent.mkdir(parents=True)
+        overlay.write_text('/opt/dsh-go/dsh-go-bridge/lib/index.js')
+        import hashlib
+        digest = lambda value: hashlib.sha256(value).hexdigest()
+        pins = {'patches': {
+            'z-first.diff': {'v': {'node_modules/example.js': {'before': digest(b'original'), 'after': digest(b'middle')},
+                                    'node_modules/missing.d.ts': {'before': digest(b'a'), 'after': digest(b'b')}}},
+            'a-second.diff': {'v': {'node_modules/example.js': {'before': digest(b'middle'), 'after': digest(b'final')}}},
+        }}
+        pinfile = self.root / 'pins.json'
+        pinfile.write_text(json.dumps(pins))
+        manifest = self.root / 'manifest.json'
+        manifest.write_text(json.dumps({'dshVersion': 'v', 'dshPatches': ['z-first.diff', 'a-second.diff']}))
+        result = self.run_python(code, root, pinfile, manifest)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        target.write_bytes(b'tampered')
+        self.assertNotEqual(self.run_python(code, root, pinfile, manifest).returncode, 0)
+
     def test_index_preserves_legacy_then_layered_format(self):
         text = (ROOT / 'runtime/build-runtime.sh').read_text()
         code = heredoc(text, 'python3 -I - "$OUT" <<\'PYEOF\'\n', '\nPYEOF')

@@ -162,14 +162,18 @@ import hashlib, json, os, sys
 root, pins, manifest = sys.argv[1:4]
 m = json.load(open(manifest))
 terminal = {}
-for name, versions in sorted(json.load(open(pins))["patches"].items()):
-    for rel, pin in versions[m["dshVersion"]].items():
+patches = json.load(open(pins))["patches"]
+for name in m["dshPatches"]:
+    for rel, pin in patches[name][m["dshVersion"]].items():
         if rel in terminal:
             assert terminal[rel] == pin["before"], (name, rel, 'broken ordered hash chain')
         terminal[rel] = pin["after"]
     assert name in m["dshPatches"], m["dshPatches"]
 for rel, expected in terminal.items():
-    got = hashlib.sha256(open(os.path.join(root, "opt/dsh", rel), "rb").read()).hexdigest()
+    path = os.path.join(root, "opt/dsh", rel)
+    if not os.path.exists(path) and (rel.endswith('.d.ts') or rel.endswith('.map')):
+        continue
+    got = hashlib.sha256(open(path, "rb").read()).hexdigest()
     assert got == expected, (rel, got)
 assert os.path.isfile(os.path.join(root, "opt/dsh-go/dsh-go-bridge/lib/client.js"))
 assert "/opt/dsh-go/dsh-go-bridge/lib/index.js" in open(os.path.join(root, "etc/dsh-app/dsh-web.patch.yml")).read()
