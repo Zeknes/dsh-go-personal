@@ -54,7 +54,6 @@ final livePushProvider = Provider<LivePush>((ref) {
   final enabled = ref.watch(notifyPrefsProvider.select((p) => p.enabled && p.live));
   return LivePush(
     enabled: enabled,
-    packId: ref.watch(petStateProvider.select((s) => s.packId == noPetId ? null : s.packId)),
     activity: enabled ? ref.watch(liveActivityProvider) : null,
   );
 });
