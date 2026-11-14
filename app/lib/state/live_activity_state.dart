@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../notify/live_activity.dart';
+import '../pets/pet_mood.dart' show PetPending;
 import '../pets/pet_signals.dart';
 import '../pets/pet_state.dart';
 import 'chat_state.dart';
@@ -29,11 +30,17 @@ final liveActivityProvider = Provider<LiveActivity?>((ref) {
       : ref.watch(chatProvider(session).select((chat) => petFocusOf(host, session, chat)));
   final titles = ref.watch(_liveTitlesProvider);
   learnLiveTitles(titles, signals.runs, focus: focus);
+  final pending = [...signals.pending];
+  if (focus?.waitingKey case final key?) {
+    if (!pending.any((item) => item.host == host && item.sessionId == session)) {
+      pending.insert(0, PetPending(host: host, sessionId: session!, key: key, question: focus!.waitingQuestion));
+    }
+  }
   final prefs = ref.watch(notifyPrefsProvider);
   return liveActivityOf(
     pet: ref.watch(petStateProvider),
     runs: signals.runs,
-    pending: signals.pending,
+    pending: pending,
     focus: focus,
     titles: titles,
     showDone: prefs.done,

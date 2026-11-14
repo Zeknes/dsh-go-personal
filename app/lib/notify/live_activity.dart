@@ -112,7 +112,7 @@ LiveActivity? liveActivityOf({
   final l10n = appL10n;
   final roots = {for (final r in runs) PetTarget(r.host, r.root)};
   final running = roots.isNotEmpty;
-  final target = pet.target ?? (running ? roots.first : null);
+  final target = pet.target ?? pending.firstOrNull?.target ?? (running ? roots.first : null);
   if (target == null) return null;
 
   DateTime? started(PetTarget t) {
@@ -164,6 +164,17 @@ LiveActivity? liveActivityOf({
       _ => (l10n.liveThinking, l10n.liveChipThinking),
     };
     return make(LiveKind.running, counted(text), chip, l10n.livePublicRunning);
+  }
+
+  if (pending.isNotEmpty) {
+    final request = pending.where((p) => p.target == target).firstOrNull ?? pending.first;
+    return make(
+      LiveKind.waiting,
+      counted(request.question ? l10n.commonWaitingAnswer : l10n.commonWaitingApproval),
+      request.question ? l10n.liveChipQuestion : l10n.liveChipApproval,
+      l10n.livePublicWaiting,
+      eventId: request.key,
+    );
   }
 
   switch (pet.state) {
