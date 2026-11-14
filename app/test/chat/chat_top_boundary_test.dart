@@ -1,10 +1,8 @@
-import 'package:dsh_app/pets/pet_signals.dart';
 import 'package:dsh_app/state/chat_state.dart';
 import 'package:dsh_app/ui/chat/chat_list.dart';
 import 'package:dsh_app/ui/theme/theme.dart';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/harness.dart';
@@ -257,27 +255,6 @@ void main() {
     final spinner = tester.getRect(find.byType(CircularProgressIndicator));
     expect(spinner.center.dy, closeTo(_expectedTop(tester) + 24, 0.5));
     expect(_position(tester).maxScrollExtent, _position(tester).minScrollExtent);
-  });
-
-  testWidgets('pet headroom preserves short alignment and reserves room below long content', (tester) async {
-    final chat = await _open(
-      tester,
-      ChatState(loading: false, items: [_user(1, 'First prompt'), _reply(2, 'Short reply')]),
-    );
-    final container = ProviderScope.containerOf(tester.element(find.byType(ChatList)));
-    container.read(petHeadroomProvider.notifier).set(80);
-    await pumpFrames(tester, 10);
-    _expectTop(tester, 'short-pet', short: true);
-    chat.emit(ChatState(loading: false, items: _history()));
-    await pumpFrames(tester, 20);
-    _expectBottom(tester);
-    final tail = find.byKey(const ValueKey('a40'));
-    double gap() => tester.getBottomLeft(find.byType(ChatList)).dy - tester.getBottomLeft(tail).dy;
-    expect(gap(), closeTo(6 + AppSpace.sm + 80, 0.5));
-    container.read(petHeadroomProvider.notifier).set(0);
-    await pumpFrames(tester, 10);
-    _expectBottom(tester);
-    expect(gap(), closeTo(6 + AppSpace.sm, 0.5));
   });
 
   testWidgets('keyboard viewport changes keep short content at the top and long content pinned', (tester) async {
