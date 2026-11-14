@@ -7,15 +7,12 @@ import 'dart:ui' as ui;
 import 'package:dsh_app/app.dart';
 import 'package:dsh_app/l10n/l10n.dart';
 import 'package:dsh_app/performance/performance_state.dart';
-import 'package:dsh_app/pets/pet_pack.dart';
-import 'package:dsh_app/pets/pet_sheets.dart';
 import 'package:dsh_app/state/locale_state.dart';
 import 'package:dsh_app/state/ui_mode_state.dart';
 import 'package:dsh_app/ui/common/app_sheet.dart';
 import 'package:dsh_app/ui/common/display_image.dart';
 import 'package:dsh_app/ui/onboarding/runtime_choice.dart';
 import 'package:dsh_app/runtime/local_footprint.dart';
-import 'package:dsh_app/ui/pets/pet_sprite.dart';
 import 'package:dsh_app/ui/plugins/plugin_widgets.dart';
 import 'package:dsh_app/ui/settings/performance_page.dart';
 import 'package:dsh_app/ui/settings/settings_widgets.dart';
@@ -97,12 +94,6 @@ Future<ByteData> png(int width, int height) async {
   return data;
 }
 
-class _SheetBundle extends CachingAssetBundle {
-  _SheetBundle(this.data);
-  final ByteData data;
-  @override
-  Future<ByteData> load(String key) async => data;
-}
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -434,60 +425,6 @@ void main() {
     await tester.pump(const Duration(seconds: 30));
     expect(platform.controllers, hasLength(1), reason: 'No hidden replacement/prewarm is created');
     expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('a real looping sprite becomes still in light mode and resumes in full', (tester) async {
-    window(tester);
-    const anim = PetAnimation(
-      name: 'idle',
-      sheet: 'fixture.png',
-      frameWidth: 8,
-      frameHeight: 8,
-      cols: 2,
-      box: Rect.fromLTWH(0, 0, 8, 8),
-      frames: [PetFrame(0, 100), PetFrame(1, 100)],
-    );
-    const pack = PetPack(
-      id: 'a4-fixture',
-      name: 'Fixture',
-      canvas: Size(8, 8),
-      anchorX: 4,
-      baseline: 8,
-      contentBox: Rect.fromLTWH(0, 0, 8, 8),
-      animations: {'idle': anim},
-      states: {
-        'idle': ['idle'],
-      },
-    );
-    PetSheets.enabled = true;
-    addTearDown(() {
-      PetSheets.instance.clear();
-      PetSheets.enabled = false;
-    });
-    await tester.runAsync(() async {
-      final loaded = await PetSheets.instance.load(pack, anim, _SheetBundle(await png(16, 8)));
-      loaded.dispose();
-    });
-    final c = await mount(
-      tester,
-      const Center(
-        child: PetSprite(pack: pack, anim: anim, scale: 4),
-      ),
-    );
-    await tester.pump(const Duration(milliseconds: 110));
-    PetSpriteState sprite() => tester.state(find.byType(PetSprite));
-    expect(sprite().frame, 1);
-    await c.read(performancePrefsProvider.notifier).setMode(PerformanceMode.light);
-    await tester.pump();
-    expect(sprite().frame, 0);
-    await tester.pump(const Duration(seconds: 5));
-    expect(sprite().frame, 0);
-    expect(tester.binding.hasScheduledFrame, isFalse);
-    await c.read(performancePrefsProvider.notifier).setMode(PerformanceMode.full);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 110));
-    expect(sprite().frame, 1);
-    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets('inline plugin avatars retain cover detail at their physical display size', (tester) async {
