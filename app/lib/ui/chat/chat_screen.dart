@@ -69,7 +69,6 @@ import '../features/all_features_page.dart';
 import '../features/session_export_page.dart';
 import '../onboarding/local_install.dart';
 import '../pets/pet_perch.dart';
-import '../pets/pet_stage.dart';
 import '../plugins/native/composer_strip.dart' show ComposerStripSlot;
 import '../plugins/native/native_composer_bar.dart';
 import '../plugins/native/native_taps.dart' show NativeComposerHost, NativeComposerScope, runNativeAction;
@@ -1790,15 +1789,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         Scaffold(
           backgroundColor: Colors.transparent,
           resizeToAvoidBottomInset: true,
-          // The pet stands over the page on the capsules above the
-          // composer (they report themselves with PetPerch).
           body: NativeComposerScope(
             host: _nativeHost,
             ref: ref,
-            child: PetStage(
-              sessionId: sessionId,
-              aside: typing,
-              child: CustomMultiChildLayout(
+            child: CustomMultiChildLayout(
                 delegate: _ChatLayout(_veilHeight),
                 children: [
                   LayoutId(
@@ -2261,7 +2255,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                   ),
                 ],
               ),
-            ),
           ),
         ),
       ),
