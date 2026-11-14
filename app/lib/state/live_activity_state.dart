@@ -3,8 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../notify/live_activity.dart';
-import '../pets/pet_mood.dart' show PetActivity, PetFocus, PetPending;
-import '../pets/pet_state.dart';
+import 'task_models.dart';
 import 'chat_state.dart';
 import 'hosts_state.dart';
 import 'notify_state.dart';
@@ -14,20 +13,20 @@ import 'task_runs.dart';
 
 export '../notify/live_activity.dart';
 
-PetFocus _focusOf(HostRef host, String sessionId, ChatState chat) {
+TaskFocus _focusOf(HostRef host, String sessionId, ChatState chat) {
   final approval = chat.openApproval;
   final question = approval == null ? chat.questions.firstOrNull : null;
-  return PetFocus(
+  return TaskFocus(
     host: host,
     sessionId: sessionId,
     title: chat.title,
-    activity: chat.running ? PetActivity.thinking : PetActivity.none,
+    activity: chat.running ? TaskActivity.thinking : TaskActivity.none,
     waitingKey: approval?.eventId ?? question?.eventId,
     waitingQuestion: question != null,
   );
 }
 
-final _liveTitlesProvider = Provider<Map<PetTarget, String>>((ref) => <PetTarget, String>{});
+final _liveTitlesProvider = Provider<Map<TaskTarget, String>>((ref) => <TaskTarget, String>{});
 
 final liveActivityProvider = Provider<LiveActivity?>((ref) {
   final runs = ref.watch(petRunsProvider);
@@ -42,7 +41,7 @@ final liveActivityProvider = Provider<LiveActivity?>((ref) {
   final pending = [
     for (final alert in alerts)
       if (alert.kind.attention)
-        PetPending(
+        TaskPending(
           host: alert.host,
           sessionId: alert.sessionId,
           key: alert.key,
@@ -51,26 +50,26 @@ final liveActivityProvider = Provider<LiveActivity?>((ref) {
   ];
   if (focus?.waitingKey case final key?) {
     if (!pending.any((item) => item.host == host && item.sessionId == session)) {
-      pending.insert(0, PetPending(host: host, sessionId: session!, key: key, question: focus!.waitingQuestion));
+      pending.insert(0, TaskPending(host: host, sessionId: session!, key: key, question: focus!.waitingQuestion));
     }
   }
   final terminal = alerts.where((a) => !a.kind.attention && a.kind != AlertKind.stopped).lastOrNull;
   final target =
       pending.firstOrNull?.target ??
-      (terminal == null ? null : PetTarget(terminal.host, terminal.sessionId)) ??
-      (runs.isEmpty ? null : PetTarget(runs.first.host, runs.first.root));
+      (terminal == null ? null : TaskTarget(terminal.host, terminal.sessionId)) ??
+      (runs.isEmpty ? null : TaskTarget(runs.first.host, runs.first.root));
   final foreground = ref.watch(appForegroundProvider);
-  if (terminal != null) titles[PetTarget(terminal.host, terminal.sessionId)] = terminal.title;
+  if (terminal != null) titles[TaskTarget(terminal.host, terminal.sessionId)] = terminal.title;
   final state = pending.isNotEmpty
-      ? PetStateName.notification
+      ? TaskStateName.notification
       : terminal?.kind == AlertKind.done
-      ? PetStateName.attention
+      ? TaskStateName.attention
       : terminal?.kind == AlertKind.failed
-      ? PetStateName.error
-      : PetStateName.thinking;
+      ? TaskStateName.error
+      : TaskStateName.thinking;
   final prefs = ref.watch(notifyPrefsProvider);
   return liveActivityOf(
-    pet: PetState(state: state, target: target, foreground: foreground),
+    pet: TaskState(state: state, target: target, foreground: foreground),
     runs: runs,
     pending: pending,
     focus: focus,

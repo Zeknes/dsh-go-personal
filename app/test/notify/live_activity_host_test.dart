@@ -1,4 +1,4 @@
-import 'package:dsh_app/pets/pet_mood.dart';
+import 'package:dsh_app/state/task_models.dart';
 import 'package:dsh_app/state/hosts_state.dart';
 import 'package:dsh_app/state/live_activity_state.dart';
 import 'package:dsh_app/state/notify_state.dart';
@@ -19,7 +19,7 @@ class RecordingNotify extends NotifyChannel {
 void main() {
   testWidgets('home host mounts live updates once, follows data, and disposes', (tester) async {
     final channel = RecordingNotify();
-    final runs = ValueNotifier<List<PetRun>>([]);
+    final runs = ValueNotifier<List<TaskRun>>([]);
     final container = ProviderContainer(
       overrides: [
         notifyChannelProvider.overrideWithValue(channel),
@@ -40,7 +40,7 @@ void main() {
     await tester.pump();
     expect(channel.pushes.length, 1);
     expect(channel.pushes.last.activity, isNull);
-    runs.value = [const PetRun(HostRef.local, 's1')];
+    runs.value = [const TaskRun(HostRef.local, 's1')];
     await tester.pump();
     expect(channel.pushes.last.activity?.kind, LiveKind.running);
     final before = channel.pushes.length;
@@ -58,11 +58,11 @@ void main() {
   });
 }
 
-class _Runs extends PetRunsController {
+class _Runs extends TaskRunsController {
   _Runs(this.runs);
-  final ValueNotifier<List<PetRun>> runs;
+  final ValueNotifier<List<TaskRun>> runs;
   @override
-  List<PetRun> build() {
+  List<TaskRun> build() {
     void changed() => state = runs.value;
     runs.addListener(changed);
     ref.onDispose(() => runs.removeListener(changed));

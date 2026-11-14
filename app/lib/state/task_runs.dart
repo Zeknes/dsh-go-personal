@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../pets/pet_mood.dart' show PetRun;
+import 'task_models.dart';
 import 'connection_state.dart';
 import 'hosts_state.dart';
 
@@ -37,9 +37,9 @@ class _HostRuns {
     return current;
   }
 
-  List<PetRun> get runs => [
+  List<TaskRun> get runs => [
     for (final MapEntry(:key, :value) in _running.entries)
-      PetRun(
+      TaskRun(
         host,
         key,
         subagent: _info[key]?.isSubagent ?? false,
@@ -143,12 +143,12 @@ class _HostRuns {
 
 /// Every running conversation and subagent on the on-device engine and the
 /// active remote host.
-class PetRunsController extends Notifier<List<PetRun>> {
+class TaskRunsController extends Notifier<List<TaskRun>> {
   final Map<HostRef, _HostRuns> _hosts = {};
   bool _built = false;
 
   @override
-  List<PetRun> build() {
+  List<TaskRun> build() {
     _built = false;
     ref.onDispose(() {
       for (final h in _hosts.values) {
@@ -180,7 +180,7 @@ class PetRunsController extends Notifier<List<PetRun>> {
     _changed();
   }
 
-  List<PetRun> _collect() => [for (final h in _hosts.values) ...h.runs];
+  List<TaskRun> _collect() => [for (final h in _hosts.values) ...h.runs];
 
   void _changed() {
     if (!_built) return;
@@ -189,4 +189,4 @@ class PetRunsController extends Notifier<List<PetRun>> {
   }
 }
 
-final petRunsProvider = NotifierProvider<PetRunsController, List<PetRun>>(PetRunsController.new);
+final petRunsProvider = NotifierProvider<TaskRunsController, List<TaskRun>>(TaskRunsController.new);

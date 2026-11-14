@@ -18,8 +18,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../l10n/l10n.dart';
-import '../pets/pet_mood.dart';
-import '../pets/pet_state.dart';
+import '../state/task_models.dart';
 import 'chat_alerts.dart' show alertTitle;
 
 enum LiveKind { running, waiting, done, failed }
@@ -52,13 +51,13 @@ class LiveActivity {
   final String publicText;
 
   /// The pet state whose picture goes with it.
-  final PetStateName mood;
+  final TaskStateName mood;
 
   /// When the run started: the chip counts up from it.
   final DateTime? since;
 
   /// The conversation a tap opens.
-  final PetTarget? target;
+  final TaskTarget? target;
 
   /// The request it waits on.
   final String? eventId;
@@ -101,21 +100,21 @@ class LiveActivity {
 /// finished one keeps its name for its moment. [showDone] / [showFailed]
 /// follow the 「一轮完成」 / 「出错或被停下」 notification switches.
 LiveActivity? liveActivityOf({
-  required PetState pet,
-  required List<PetRun> runs,
-  required List<PetPending> pending,
-  PetFocus? focus,
-  Map<PetTarget, String> titles = const {},
+  required TaskState pet,
+  required List<TaskRun> runs,
+  required List<TaskPending> pending,
+  TaskFocus? focus,
+  Map<TaskTarget, String> titles = const {},
   bool showDone = true,
   bool showFailed = true,
 }) {
   final l10n = appL10n;
-  final roots = {for (final r in runs) PetTarget(r.host, r.root)};
+  final roots = {for (final r in runs) TaskTarget(r.host, r.root)};
   final running = roots.isNotEmpty;
   final target = pet.target ?? pending.firstOrNull?.target ?? (running ? roots.first : null);
   if (target == null) return null;
 
-  DateTime? started(PetTarget t) {
+  DateTime? started(TaskTarget t) {
     DateTime? first;
     for (final r in runs) {
       final since = r.since;
@@ -155,12 +154,12 @@ LiveActivity? liveActivityOf({
     eventId: eventId,
   );
 
-  LiveActivity? runningAs(PetStateName state) {
+  LiveActivity? runningAs(TaskStateName state) {
     if (!running) return null;
     final (text, chip) = switch (state) {
-      PetStateName.working => (l10n.liveWorking, l10n.liveChipWorking),
-      PetStateName.juggling => (l10n.liveJuggling, l10n.liveChipJuggling),
-      PetStateName.sweeping => (l10n.liveSweeping, l10n.liveChipSweeping),
+      TaskStateName.working => (l10n.liveWorking, l10n.liveChipWorking),
+      TaskStateName.juggling => (l10n.liveJuggling, l10n.liveChipJuggling),
+      TaskStateName.sweeping => (l10n.liveSweeping, l10n.liveChipSweeping),
       _ => (l10n.liveThinking, l10n.liveChipThinking),
     };
     return make(LiveKind.running, counted(text), chip, l10n.livePublicRunning);
@@ -178,7 +177,7 @@ LiveActivity? liveActivityOf({
   }
 
   switch (pet.state) {
-    case PetStateName.notification:
+    case TaskStateName.notification:
       final request = pending.where((p) => p.target == target).firstOrNull ?? pending.firstOrNull;
       final question = request?.question ?? false;
       return make(
@@ -188,24 +187,24 @@ LiveActivity? liveActivityOf({
         l10n.livePublicWaiting,
         eventId: request?.key,
       );
-    case PetStateName.attention when !pet.foreground && showDone:
+    case TaskStateName.attention when !pet.foreground && showDone:
       return make(LiveKind.done, l10n.statePetDone, l10n.liveChipDone, l10n.livePublicDone);
-    case PetStateName.error when !pet.foreground && showFailed:
+    case TaskStateName.error when !pet.foreground && showFailed:
       return make(LiveKind.failed, l10n.statePetFailed, l10n.liveChipFailed, l10n.livePublicFailed);
-    case PetStateName.thinking || PetStateName.working || PetStateName.juggling || PetStateName.sweeping:
+    case TaskStateName.thinking || TaskStateName.working || TaskStateName.juggling || TaskStateName.sweeping:
       return runningAs(pet.state);
     default:
-      return runningAs(PetStateName.thinking);
+      return runningAs(TaskStateName.thinking);
   }
 }
 
 /// Remembers titles from [runs] and then the current [focus], newest last,
 /// keeping at most [max].
-void learnLiveTitles(Map<PetTarget, String> titles, List<PetRun> runs, {PetFocus? focus, int max = 32}) {
+void learnLiveTitles(Map<TaskTarget, String> titles, List<TaskRun> runs, {TaskFocus? focus, int max = 32}) {
   for (final r in runs) {
     final title = r.title;
     if (title == null || title.trim().isEmpty) continue;
-    final key = PetTarget(r.host, r.root);
+    final key = TaskTarget(r.host, r.root);
     titles.remove(key);
     titles[key] = title;
   }
