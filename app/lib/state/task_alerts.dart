@@ -13,7 +13,7 @@ class TaskAlertsController extends Notifier<Map<TaskAlertKey, ChatAlert>> {
 
   @override
   Map<TaskAlertKey, ChatAlert> build() {
-    ref.listen(petRunsProvider, (previous, next) {
+    ref.listen(taskRunsProvider, (previous, next) {
       final before = {for (final run in previous ?? []) (host: run.host, sessionId: run.root)};
       for (final run in next) {
         if (!before.contains((host: run.host, sessionId: run.root))) {

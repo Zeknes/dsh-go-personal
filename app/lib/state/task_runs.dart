@@ -189,4 +189,4 @@ class TaskRunsController extends Notifier<List<TaskRun>> {
   }
 }
 
-final petRunsProvider = NotifierProvider<TaskRunsController, List<TaskRun>>(TaskRunsController.new);
+final taskRunsProvider = NotifierProvider<TaskRunsController, List<TaskRun>>(TaskRunsController.new);

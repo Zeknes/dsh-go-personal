@@ -16,7 +16,7 @@ import '../state/hosts_state.dart';
 import '../state/notify_state.dart' show FlagController, appForegroundProvider, chatOnScreenProvider;
 import '../state/run_pulse.dart';
 import '../state/task_runs.dart';
-export '../state/task_runs.dart' show petRunsProvider, TaskRunsController;
+export '../state/task_runs.dart' show taskRunsProvider, TaskRunsController;
 import '../state/session_attention_state.dart';
 import '../ui/chat/run_info.dart';
 import 'pet_mood.dart';
@@ -266,7 +266,7 @@ final petSignalsProvider = Provider<PetSignals>((ref) {
     focus: focus,
     viewed: focus != null && ref.watch(appForegroundProvider) && ref.watch(chatOnScreenProvider),
     runs: [
-      for (final run in ref.watch(petRunsProvider))
+      for (final run in ref.watch(taskRunsProvider))
         PetRun(run.host, run.sessionId, subagent: run.subagent, root: run.root, since: run.since, title: run.title),
     ],
     pending: ref.watch(petPendingProvider),

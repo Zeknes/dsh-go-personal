@@ -24,7 +24,7 @@ void main() {
       overrides: [
         notifyChannelProvider.overrideWithValue(channel),
         notifySystemStatusProvider.overrideWith((ref) async => const NotifySystemStatus()),
-        petRunsProvider.overrideWith(() => _Runs(runs)),
+        taskRunsProvider.overrideWith(() => _Runs(runs)),
       ],
     );
     addTearDown(() {

@@ -7,7 +7,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dsh_app/links/launcher_entries.dart';
-import 'package:dsh_app/pets/pet_signals.dart';
+import 'package:dsh_app/state/task_runs.dart';
 import 'package:dsh_app/runtime/runtime_bridge.dart';
 import 'package:dsh_app/runtime/runtime_state.dart';
 import 'package:dsh_app/state/chat_state.dart';
@@ -615,7 +615,7 @@ void main() {
   test('P12 C8 old PetRuns list completion cannot overwrite replacement client runs', () async {
     final h = _LocalHarness();
     addTearDown(h.close);
-    h.c.listen(petRunsProvider, (_, _) {});
+    h.c.listen(taskRunsProvider, (_, _) {});
     await _waitFor(() => h.connects.isNotEmpty);
     final a = h.complete('A');
     await _waitFor(() => a.hosts.hasListener);
@@ -628,10 +628,10 @@ void main() {
     b.hosts.add(const HostReadyEvent('B', '/home/b'));
     await _waitFor(() => b.wire.lists.isNotEmpty);
     b.wire.lists.single.complete(_sessions('B-session', true));
-    await _waitFor(() => h.c.read(petRunsProvider).isNotEmpty);
+    await _waitFor(() => h.c.read(taskRunsProvider).isNotEmpty);
     a.wire.lists.single.complete(_sessions('A-session', true));
     await flush();
-    final runs = h.c.read(petRunsProvider).map((r) => r.sessionId).toList();
+    final runs = h.c.read(taskRunsProvider).map((r) => r.sessionId).toList();
     expect(runs, ['B-session']);
     trace('C8-PetRuns-late-old-list', {'runs': runs, 'oldClosed': a.wire.closed});
   });
@@ -812,23 +812,23 @@ void main() {
   test('P12 B7 same-client late PetRuns list must not resurrect a stopped run', () async {
     final h = _LocalHarness();
     addTearDown(h.close);
-    h.c.listen(petRunsProvider, (_, _) {});
+    h.c.listen(taskRunsProvider, (_, _) {});
     await _waitFor(() => h.connects.isNotEmpty);
     final a = h.complete('A');
     await _waitFor(() => a.hosts.hasListener);
     a.hosts.add(const HostReadyEvent('A-first', '/home/a'));
     await _waitFor(() => a.wire.lists.length == 1);
     a.wire.lists.first.complete(_sessions('S', true));
-    await _waitFor(() => h.c.read(petRunsProvider).isNotEmpty);
+    await _waitFor(() => h.c.read(taskRunsProvider).isNotEmpty);
     a.hosts.add(const HostReadyEvent('A-reconnected', '/home/a'));
     await _waitFor(() => a.wire.lists.length == 2);
     // Valid network ordering: the unary list snapshot was taken while S
     // ran, then a later status edge arrived before that delayed response.
     a.hosts.add(const SessionStatusEvent('S', false));
-    await _waitFor(() => h.c.read(petRunsProvider).isEmpty);
+    await _waitFor(() => h.c.read(taskRunsProvider).isEmpty);
     a.wire.lists.last.complete(_sessions('S', true));
     await flush();
-    final runs = h.c.read(petRunsProvider).map((r) => r.sessionId).toList();
+    final runs = h.c.read(taskRunsProvider).map((r) => r.sessionId).toList();
     trace('B7-PetRuns-same-client-list-status-race', {
       'runsAfterStopAndLateList': runs,
       'listCalls': a.wire.lists.length,

@@ -29,7 +29,7 @@ TaskFocus _focusOf(HostRef host, String sessionId, ChatState chat) {
 final _liveTitlesProvider = Provider<Map<TaskTarget, String>>((ref) => <TaskTarget, String>{});
 
 final liveActivityProvider = Provider<LiveActivity?>((ref) {
-  final runs = ref.watch(petRunsProvider);
+  final runs = ref.watch(taskRunsProvider);
   final alerts = ref.watch(taskAlertsProvider).values.toList();
   final session = ref.watch(currentSessionProvider);
   final host = ref.watch(activeHostProvider);

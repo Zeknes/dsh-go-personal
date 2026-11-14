@@ -14,8 +14,10 @@
 import 'dart:convert';
 
 import 'package:dsh_app/l10n/l10n.dart';
-import 'package:dsh_app/pets/pet_mood.dart';
-import 'package:dsh_app/pets/pet_signals.dart';
+import 'package:dsh_app/state/task_models.dart';
+import 'package:dsh_app/state/task_runs.dart';
+import 'package:dsh_app/state/task_alerts.dart';
+import 'package:dsh_app/state/sessions_state.dart';
 import 'package:dsh_app/runtime/runtime_bridge.dart' show RuntimePhase, RuntimeStatus;
 import 'package:dsh_app/runtime/runtime_state.dart';
 import 'package:dsh_app/state/draft_store.dart';
@@ -91,7 +93,11 @@ class Value<T> extends Notifier<T> {
   void put(T value) => state = value;
 }
 
-final _pending = NotifierProvider<Value<List<PetPending>>, List<PetPending>>(() => Value(const []));
+class _TaskRuns extends TaskRunsController {
+  @override
+  List<TaskRun> build() => const [];
+  void put(List<TaskRun> value) => state = value;
+}
 
 class FakePhone extends PhoneTaskSeenController {
   @override
@@ -163,7 +169,7 @@ class _Bench {
       opened.add(uri);
       return browser;
     }),
-    petPendingProvider.overrideWith((ref) => ref.watch(_pending)),
+    taskRunsProvider.overrideWith(_TaskRuns.new),
     phoneTaskSeenProvider.overrideWith(FakePhone.new),
   ];
 }
@@ -534,22 +540,29 @@ void main() {
     }
 
     testWidgets('a turn runs in the conversation on screen', (tester) async {
-      const busy = PetFocus(host: HostRef.local, sessionId: 's1', activity: PetActivity.working);
-      await blocked(
-        tester,
-        (b) async => b.container.read(petFocusProvider.notifier).report(busy),
-        lift: (b) async =>
-            b.container.read(petFocusProvider.notifier).report(const PetFocus(host: HostRef.local, sessionId: 's1')),
-      );
+      await blocked(tester, (b) async {
+        b.container.read(currentSessionProvider.notifier).select('s1');
+        (b.container.read(taskRunsProvider.notifier) as _TaskRuns).put([const TaskRun(HostRef.local, 's1')]);
+      }, lift: (b) async => (b.container.read(taskRunsProvider.notifier) as _TaskRuns).put([]));
     });
 
     testWidgets('an approval or a question waits', (tester) async {
       await blocked(
         tester,
-        (b) async => b.container.read(_pending.notifier).put([
-          const PetPending(host: HostRef.local, sessionId: 's3', key: 'e1'),
-        ]),
-        lift: (b) async => b.container.read(_pending.notifier).put(const []),
+        (b) async => b.container
+            .read(taskAlertsProvider.notifier)
+            .record(
+              const ChatAlert(
+                host: HostRef.local,
+                sessionId: 's3',
+                key: 'e1',
+                kind: AlertKind.approval,
+                title: 'Task',
+                text: 'Approval',
+              ),
+            ),
+        lift: (b) async =>
+            b.container.read(taskAlertsProvider.notifier).remove((host: HostRef.local, sessionId: 's3', key: 'e1')),
       );
     });
 

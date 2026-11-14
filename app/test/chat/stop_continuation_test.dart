@@ -5,7 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dsh_app/pets/pet_signals.dart';
+import 'package:dsh_app/state/task_runs.dart';
 import 'package:dsh_app/state/attachments.dart';
 import 'package:dsh_app/state/chat_state.dart';
 import 'package:dsh_app/state/connection_state.dart';
@@ -220,7 +220,7 @@ class _Harness {
       ],
     );
     container.listen(chatProvider('S'), (_, _) {});
-    if (pets) container.listen(petRunsProvider, (_, _) {});
+    if (pets) container.listen(taskRunsProvider, (_, _) {});
   }
   late final ProviderContainer container;
   final clients = <_Client>[];
@@ -294,7 +294,7 @@ void _petTrace(String scenario, _Harness h, _Client a) => debugPrint(
   'P12_REVIEW ${jsonEncode({
     'scenario': scenario,
     'listCalls': a.wire.at('session/list').length,
-    'runs': h.container.read(petRunsProvider).map((r) => {'id': r.sessionId, 'root': r.root, 'subagent': r.subagent}).toList(),
+    'runs': h.container.read(taskRunsProvider).map((r) => {'id': r.sessionId, 'root': r.root, 'subagent': r.subagent}).toList(),
   })}',
 );
 
@@ -557,7 +557,7 @@ void main() {
     a.wire.answer('session/list', 0, sessions([summary('S', true)]));
     await settle();
     _petTrace('P1-idempotent-false', h, a);
-    expect(h.container.read(petRunsProvider), isEmpty);
+    expect(h.container.read(taskRunsProvider), isEmpty);
     expect(a.wire.at('session/list'), hasLength(1));
   });
 
@@ -569,7 +569,7 @@ void main() {
     a.wire.answer('session/list', 0, sessions([summary('S', true)]));
     await settle();
     _petTrace('P2-removed', h, a);
-    expect(h.container.read(petRunsProvider), isEmpty);
+    expect(h.container.read(taskRunsProvider), isEmpty);
   });
 
   test('P3 PetRuns: newer added lineage survives the older list', () async {
@@ -580,7 +580,7 @@ void main() {
     a.wire.answer('session/list', 0, sessions([summary('child', true, parent: 'old-parent')]));
     await settle();
     _petTrace('P3-new-info', h, a);
-    final run = h.container.read(petRunsProvider).single;
+    final run = h.container.read(taskRunsProvider).single;
     expect(run.root, 'new-parent');
     expect(run.subagent, isTrue);
   });
@@ -595,7 +595,7 @@ void main() {
     a.wire.answer('session/list', 0, sessions([summary('S', true)]));
     await settle();
     _petTrace('P4-remove-add', h, a);
-    expect(h.container.read(petRunsProvider), isEmpty);
+    expect(h.container.read(taskRunsProvider), isEmpty);
   });
 
   test('P5 PetRuns: ready burst discards old result and requests exactly one fresh list', () async {
@@ -606,11 +606,11 @@ void main() {
     await settle();
     a.wire.answer('session/list', 0, sessions([summary('old', true)]));
     await until(() => a.wire.at('session/list').length == 2);
-    expect(h.container.read(petRunsProvider), isEmpty);
+    expect(h.container.read(taskRunsProvider), isEmpty);
     a.wire.answer('session/list', 1, sessions([summary('new', true)]));
     await settle();
     _petTrace('P5-ready-burst', h, a);
-    expect(h.container.read(petRunsProvider).map((r) => r.sessionId), ['new']);
+    expect(h.container.read(taskRunsProvider).map((r) => r.sessionId), ['new']);
     expect(a.wire.at('session/list'), hasLength(2));
   });
 
@@ -624,7 +624,7 @@ void main() {
     a.wire.answer('session/list', 1, sessions([summary('current', true)]));
     await settle();
     _petTrace('P6-retry-after-list-failure', h, a);
-    expect(h.container.read(petRunsProvider).map((r) => r.sessionId), ['current']);
+    expect(h.container.read(taskRunsProvider).map((r) => r.sessionId), ['current']);
     expect(a.wire.at('session/list'), hasLength(2));
   });
 }
