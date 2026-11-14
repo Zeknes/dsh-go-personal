@@ -46,9 +46,6 @@ const guideSkillName = 'dsh-go-guide';
 /// and turns a symptom into a redacted environment summary / issue draft.
 const supportSkillName = 'dsh-go-support';
 
-/// Uses the same report, prompt and checked adapter as companion light mode.
-const companionAdaptSkillName = 'companion-adapt';
-
 /// The managed line inside SKILL.md's front matter.
 const uiSkillManagedMarker = '# dsh-go:managed';
 
@@ -162,7 +159,6 @@ final extraSkillLoadersProvider = Provider<List<UiSkillBundleLoader>>(
     () => loadUiSkillBundle(null, pluginSkillName),
     () => loadUiSkillBundle(null, guideSkillName),
     () => loadUiSkillBundle(null, supportSkillName),
-    () => loadUiSkillBundle(null, companionAdaptSkillName),
   ],
 );
 
