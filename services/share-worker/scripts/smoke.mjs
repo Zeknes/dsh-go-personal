@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Local smoke test: starts `wrangler dev` (workerd with local R2, KV and rate
-// limits; nothing touches Cloudflare) and runs scripts/e2e.mjs against it.
+// limits; nothing touches Cloudflare) and checks retained download routes against it.
 //
 //   npm run smoke
 
@@ -11,7 +11,6 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { run } from './e2e.mjs';
 
 const worker = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const port = 8700 + Math.floor(Math.random() * 200);
@@ -82,16 +81,8 @@ for (;;) {
 }
 
 try {
-  await run(base, { adminKey });
-  // The local rate limiter: 5 uploads a minute from one client.
-  const blob = new Uint8Array(64);
-  blob.set([0x44, 0x53, 0x47, 0x31]);
-  const statuses = [];
-  for (let i = 0; i < 6; i++) {
-    const res = await fetch(`${base}/api/v1/c?ttl=7d`, { method: 'POST', body: blob, headers: { 'Content-Type': 'application/octet-stream' } });
-    statuses.push(res.status);
-  }
-  console.log(`ok - burst limit: ${statuses.join(' ')}`);
+  const retired = await fetch(`${base}/api/v1/c`, { method: 'POST', body: 'test' });
+  if (retired.status !== 404) throw new Error(`public share route still active: ${retired.status}`);
 
   // Beta: page, unlock, signed download with resume, channel token, old mirror gone.
   const page = await fetch(`${base}/beta`);
