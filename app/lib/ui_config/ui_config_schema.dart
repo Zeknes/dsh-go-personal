@@ -149,8 +149,6 @@ abstract final class UiSchema {
     'agent-team',
     'cot-translation',
     'voice-input',
-    'forum',
-    'community',
     'ds-bot',
     'share-profile',
     'search',
