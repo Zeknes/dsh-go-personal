@@ -126,7 +126,9 @@ void main() {
         [_constant(entry, 'ACTION_NEW_CHAT'), _constant(entry, 'ACTION_VOICE')],
       );
       for (final s in shortcuts) {
-        expect(attr(s, 'targetPackage'), applicationId);
+        expect(applicationId, 'io.github.zeknes.dsh_pure');
+        expect(attr(s, 'targetPackage'), '@string/shortcut_target_package');
+        expect(File('android/app/build.gradle.kts').readAsStringSync(), contains('resValue("string", "shortcut_target_package", applicationId!!)'));
         expect(attr(s, 'targetClass'), 'io.github.ccch1mneyyy.dsh_app.shortcuts.EntryActivity');
       }
     });

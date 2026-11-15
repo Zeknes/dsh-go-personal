@@ -154,13 +154,11 @@ abstract final class UiSchema {
     'search',
     'notifications',
     'workspaces',
-    'general',
     'account',
     'remote',
     'phone',
     'engine',
     'diagnostics',
-    'web',
     'new-chat',
     'settings',
   ];
