@@ -63,7 +63,7 @@ bool _emojiLoaded = false;
 Future<void> loadEmojiFont() async {
   if (_emojiLoaded) return;
   _emojiLoaded = true;
-  final file = File('/usr/share/fonts/noto/NotoColorEmoji.ttf');
+  final file = File(Platform.environment['DSH_TEST_EMOJI_FONT'] ?? '/usr/share/fonts/noto/NotoColorEmoji.ttf');
   if (!file.existsSync()) return;
   final loader = FontLoader('Noto Color Emoji')..addFont(Future.value(ByteData.view(file.readAsBytesSync().buffer)));
   await loader.load();

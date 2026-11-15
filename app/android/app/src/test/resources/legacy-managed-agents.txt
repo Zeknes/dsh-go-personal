@@ -1,0 +1,24 @@
+<!-- dsh-app:managed — 删除这一行后，DSH App 不再覆盖本文件 -->
+# 运行环境（DSH 手机版）
+
+- 你运行在 Android 手机上的 Ubuntu 24.04 环境里（proot，免 Root）。这里没有可用的沙箱后端（bubblewrap / Landlock 都不可用），`workspace-write` 沙箱模式一定会被拒绝。
+- 默认工作目录是 `/root/workspace`。手机相册、下载等用户文件不在这个环境里，看不到；如需访问，请用户在 App 设置里打开「访问手机文件」。
+- 已预装 node / npm / pnpm、python3 / pip、git；npm 和 pnpm 默认用国内镜像 registry.npmmirror.com。缺别的工具可以 `apt-get update && apt-get install -y <包名>`（需要联网）。
+- 手机屏幕小：回复尽量简洁，代码块不要太宽；用用户使用的语言回答。
+
+## 界面与技能
+
+- 这个 App 的对话界面是 Flutter 原生界面，不是 Harness Web Client。改 App 自己的样子用 dsh-go-ui（ui.json）；给 App 加胶囊、菜单项、状态条、原生面板、工具卡这类功能用 dsh-go-plugin；只有用户明确要做 Cordis 插件、或要改 Harness 网页版 / 桌面端时，才用官方 cordis-plugin-development 等技能。
+- 没点名界面载体时，手机上的默认目标是 dsh-go 原生界面；先确定载体再选技能，不要按加载顺序决定。
+- dsh-go 原生插件不是 Cordis bundle：目录在 `$DSH_HOME/dsh-go/plugins/`，安装用 `dsh plugin --profile web add`；官方技能里的「工作区建包 + plugin_manager install_bundle」只用于 Cordis 插件，两套不要混用。
+- 用户报障、排查问题、写 bug 反馈时加载 `dsh-go-support` 技能：它教你怎么读本机诊断、按症状定位、生成脱敏的 issue 草稿。
+""").trimMargin()
+## 本机诊断
+
+- 用户报障（卡顿、发热、连不上、更新失败、闪退、插件不生效、手机操控失败）时，读取可用诊断：用户刚主动发布时优先读同目录的 `diagnostics-manual.md`，否则先读自动快照 `$DSH_HOME/dsh-app/diagnostics.md`。核对报告时间、版本和设备，再分析引擎状态、连接方式、性能与有限日志；有一份可用就不要因另一份缺失反复要求刷新，读取前不用另问。
+- 用户点过「让 AI 看诊断」后，同目录的 `diagnostics-manual.md` 保留最近一次手动报告（可能含本次同意采集的输入法证据）；存在时也读它并核对采集时间。后续自动快照不会覆盖它；下一次手动发布才替换，清除 App 内存证据不会撤回已发布文件。
+- 新版本提供 `mcp__phone__diagnostics` 时，报障后先自行刷新并按 summary/evidence/appErrors/voice/engine/failure 段读取，无需先读屏、开启手机操控或授予高权限。核对采集时间、refreshed 和错误码；不支持时读已有快照。工具不采系统输入法证据，不替用户外发报告。
+- 需要更多细节时，再让用户在 设置 → 诊断 里导出诊断包（zip）；它仍受日志数量和大小限制。数据不足就直说，不要凭猜测下结论。
+- 报告会尝试脱敏，但不能保证没有遗漏。外发前人工检查凭据、路径和设备信息，不把完整报告或秘密原样贴到聊天或 issue 里。
+- 完整的排查流程（症状清单、issue 模板、隐私红线）在 `dsh-go-support` 技能里；用户报障时加载它再动手。
+""".trimMargin()

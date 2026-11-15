@@ -103,6 +103,70 @@ class GuestAgentsModeTest {
         } finally { root.deleteRecursively() }
     }
 
+    @Test fun exactLegacyTemplateIsReplaced() {
+        val root = kotlin.io.path.createTempDirectory("agents-legacy").toFile()
+        try {
+            val file = File(root, "root/.dsh/AGENTS.md").apply { parentFile!!.mkdirs() }
+            file.writeText(javaClass.getResource("/legacy-managed-agents.txt")!!.readText())
+            GuestSetup.writeAgentsMd(root, phoneStorage = false, visualReplies = false)
+            val text = file.readText()
+            assertTrue(text.startsWith("<!-- dsh-app:managed BEGIN -->"))
+            assertFalse(text.contains("Ubuntu 24.04 环境里"))
+            assertTrue(text.contains("<!-- dsh-app:managed END -->"))
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun legacyWithUserChangesIsPreservedAndAppendedOnce() {
+        val root = kotlin.io.path.createTempDirectory("agents-mixed").toFile()
+        try {
+            val file = File(root, "root/.dsh/AGENTS.md").apply { parentFile!!.mkdirs() }
+            val old = javaClass.getResource("/legacy-managed-agents.txt")!!.readText() + "\n# User rule\nKeep this.\n"
+            file.writeText(old)
+            GuestSetup.writeAgentsMd(root, phoneStorage = false)
+            val first = file.readText()
+            assertTrue(first.startsWith(old))
+            assertTrue(first.contains("<!-- dsh-app:managed BEGIN -->"))
+            GuestSetup.writeAgentsMd(root, phoneStorage = false)
+            assertEquals(first, file.readText())
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun boundedBlockUpdatePreservesTextOnBothSides() {
+        val root = kotlin.io.path.createTempDirectory("agents-block").toFile()
+        try {
+            val file = File(root, "root/.dsh/AGENTS.md").apply { parentFile!!.mkdirs() }
+            file.writeText("# Before\n<!-- dsh-app:managed BEGIN -->\nold\n<!-- dsh-app:managed END -->\n# After\n")
+            GuestSetup.writeAgentsMd(root, phoneStorage = false)
+            assertTrue(file.readText().startsWith("# Before\n<!-- dsh-app:managed BEGIN -->"))
+            assertTrue(file.readText().endsWith("<!-- dsh-app:managed END -->\n# After\n"))
+            assertFalse(file.readText().contains("\nold\n"))
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun managedFactsFollowInstalledOsAndProtectUserOwnedFiles() {
+        val root = kotlin.io.path.createTempDirectory("agents-os").toFile()
+        try {
+            val release = File(root, "etc/os-release").apply { parentFile!!.mkdirs() }
+            release.writeText("PRETTY_NAME=\"Ubuntu 26.04.1 LTS\"\n")
+            val file = File(root, "root/.dsh/AGENTS.md")
+            GuestSetup.writeAgentsMd(root, phoneStorage = false)
+            assertTrue(file.readText().contains("Android 宿主的 Ubuntu 26.04.1 LTS"))
+            assertTrue(file.readText().contains("node --version"))
+            assertTrue(file.readText().contains("不可逆或对外操作"))
+            assertFalse(file.readText().contains("申请运行，并用一句话写明理由"))
+            release.writeText("PRETTY_NAME=\"Ubuntu 24.04 LTS\"\n")
+            GuestSetup.writeAgentsMd(root, phoneStorage = false)
+            assertTrue(file.readText().contains("Ubuntu 24.04 LTS"))
+            release.delete()
+            GuestSetup.writeAgentsMd(root, phoneStorage = false)
+            assertTrue(file.readText().contains("Linux（版本未确认）"))
+            file.writeText("# User instructions\nKeep me\n")
+            release.writeText("PRETTY_NAME=\"Ubuntu 26.04.1 LTS\"\n")
+            GuestSetup.writeAgentsMd(root, phoneStorage = false)
+            assertEquals("# User instructions\nKeep me\n", file.readText())
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun phoneStorageSendsOutputsToTheDshGoFolder() {
         val root = kotlin.io.path.createTempDirectory("agents-storage").toFile()
         try {

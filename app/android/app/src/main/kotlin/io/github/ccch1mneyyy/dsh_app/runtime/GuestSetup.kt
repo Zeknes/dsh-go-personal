@@ -17,24 +17,40 @@ import java.net.Inet4Address
 import java.net.InetAddress
 import java.nio.file.Files
 import java.nio.file.LinkOption
+import java.security.MessageDigest
 
 /** Small files inside the rootfs that must reflect the device before each start. */
 object GuestSetup {
     private val FALLBACK_DNS = listOf("223.5.5.5", "119.29.29.29", "8.8.8.8")
 
     private const val AGENTS_MARKER = "<!-- dsh-app:managed"
+    private const val AGENTS_BEGIN = "<!-- dsh-app:managed BEGIN -->"
+    private const val AGENTS_END = "<!-- dsh-app:managed END -->"
+    private val LEGACY_AGENT_HASHES = setOf(
+        "26796f36087334627521beea8332c627bde73842706a0f5023a9fbce0f802342",
+        "2b5ca781ecce02331c070c308d6ce324c12c127c406f1e5a841388a397cb919e",
+        "525e2203b7a923cc08def761be0741facf56f58469f8539d71a980810136252e",
+        "09ad6e0970c2f229f79e19972280c75f14fa78a921f75923fe63353412e2d2bc",
+        "b8a231a2c260bb246801e6efb21ddf1de0cf112ce23345d8f4aec193477cadc5",
+        "338b333cee5c57e0d23f151e34031c987ebcfb89fff9c8fd096aec28a88ff638",
+        "5b1265a3cc1e15d92564fa3aec16cd194160e62992638e0358fe2ff655b940f6",
+        "11d551765c9e2c0dca14eb62fcf385065b12d59a69c2adb0b64f80c09eae71ca",
+    )
+
+    private fun knownLegacyAgents(text: String): Boolean =
+        MessageDigest.getInstance("SHA-256").digest(text.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it.toInt() and 0xff) } in LEGACY_AGENT_HASHES
 
     // l10n:keep agent prompt
     private val AGENTS_MD = ("""
-        |<!-- dsh-app:managed — 删除这一行后，DSH App 不再覆盖本文件 -->
         |# 运行环境（DSH 手机版）
         |
-        |- 你运行在 Android 手机上的 Ubuntu 24.04 环境里（proot，免 Root）。这里没有可用的沙箱后端（bubblewrap / Landlock 都不可用），`workspace-write` 沙箱模式一定会被拒绝。
+        |- {ENVIRONMENT}；Android 系统权限仍由系统和用户控制。环境版本及工具状态可能变化：查看 `/etc/os-release`、`node --version` 和实际工具输出，不能根据旧对话猜测。
 """ +
         // l10n:keep agent prompt
-        """        |- 需要执行 bash 命令时，直接用 `sandbox_permissions: "danger-full-access"` 申请运行，并用一句话写明理由；不要先试沙箱模式。
+        """        |- 当前会话使用完全权限时，直接运行 bash，不要指定 `sandbox_permissions` 申请提权：`never` 策略会拒绝需要审批的请求。权限由用户在 App 中选择，较受限会话仍按实际策略执行。
         |- 默认工作目录是 `/root/workspace`。{STORAGE_LINE}
-        |- 已预装 node / npm / pnpm、python3 / pip、git；npm 和 pnpm 默认用国内镜像 registry.npmmirror.com。缺别的工具可以 `apt-get update && apt-get install -y <包名>`（需要联网）。
+        |- 已授权范围内的普通可逆读写、配置、构建和测试直接完成；遇错先诊断并在授权内恢复，不逐步征询。不可逆或对外操作、秘密与凭据、系统授权和验证码仍遵守实际授权及上层规则。
         |- 手机屏幕小：回复尽量简洁，代码块不要太宽；用用户使用的语言回答。
         |
         |## 界面与技能
@@ -105,7 +121,7 @@ object GuestSetup {
         return file
     }
 
-    /** Global DSH instructions ($DSH_HOME/AGENTS.md); left alone once the user removes the marker. */
+    /** Update only the bounded managed block; preserve unmarked user instructions. */
     fun writeAgentsMd(
         rootfs: File,
         phoneStorage: Boolean,
@@ -119,19 +135,25 @@ object GuestSetup {
                 rootfs, "/root/.dsh/AGENTS.md", phoneRoot = PhoneStorage.GUEST_PATH,
             )
             val existing = source?.readText()
-            if (Files.exists(file.toPath(), LinkOption.NOFOLLOW_LINKS) &&
-                existing?.startsWith(AGENTS_MARKER) != true) return
-            val environment = if (directEngine) {
-                // l10n:keep agent prompt
-                AGENTS_MD.replace("Ubuntu 24.04 环境里（proot，免 Root）", "Ubuntu 24.04 运行环境里（引擎直接启动，bash/git/python/apt 工具仍经 proot）")
-                    .replace("`/root/workspace`", "`${rootfs.canonicalPath}/root/workspace`") +
-                    "\n- 文件工具、会话目录、@ 引用、AGENTS 和 skills 使用同一个完整绝对路径；该路径在 shell 内也同名可见。旧的 `/root` 路径仍可用于文件工具。shell 的输出不改写，不要删除路径的前缀。\n"
-            } else AGENTS_MD
+            if (Files.exists(file.toPath(), LinkOption.NOFOLLOW_LINKS) && existing == null) return
+            if (existing != null && !existing.startsWith(AGENTS_MARKER) && !existing.contains(AGENTS_BEGIN)) return
+            val os = runCatching {
+                val release = GuestFiles.resolve(rootfs, "/etc/os-release", phoneRoot = PhoneStorage.GUEST_PATH)
+                    ?: File(rootfs, "usr/lib/os-release")
+                release.readLines().firstOrNull { it.startsWith("PRETTY_NAME=") }
+                    ?.substringAfter('=')?.trim()?.trim('"', '\'')
+                    ?.takeIf { it.length in 1..100 && it.all { ch -> ch in 'a'..'z' || ch in 'A'..'Z' || ch in '0'..'9' || ch in " ._()-" } }
+            }.getOrNull()
+            val guest = os ?: "Linux（版本未确认）"
+            val mode = if (directEngine) "引擎直接启动，命令工具仍经 PRoot" else "PRoot，免 Root"
+            val environment = AGENTS_MD.replace("{ENVIRONMENT}", "本机运行在 Android 宿主的 $guest 用户态（$mode）")
+                .let { text -> if (directEngine) text.replace("`/root/workspace`", "`${rootfs.canonicalPath}/root/workspace`") +
+                    "\n- 文件工具、会话目录、@ 引用、AGENTS 和 skills 使用同一个完整绝对路径；该路径在 shell 内也同名可见。旧的 `/root` 路径仍可用于文件工具。shell 的输出不改写，不要删除路径的前缀。\n" else text }
             val text = environment.replace(
                 "{STORAGE_LINE}",
                 if (phoneStorage) {
                     // l10n:keep agent prompt
-                    "用户已授权访问手机存储：手机内部存储挂载在 `/sdcard`（`/root/手机存储` 是它的快捷方式；相册在 `/sdcard/DCIM`，下载在 `/sdcard/Download`）。改动或删除用户文件前先说明并确认；给用户的产出文件放到 `/sdcard/Download/DSH-Go/`。"
+                    "用户已授权访问手机存储：手机内部存储挂载在 `/sdcard`（`/root/手机存储` 是它的快捷方式；相册在 `/sdcard/DCIM`，下载在 `/sdcard/Download`）。按用户授权操作并保护现有数据；给用户的产出文件放到 `/sdcard/Download/DSH-Go/`。"
                 } else {
                     // l10n:keep agent prompt
                     "手机相册、下载等用户文件不在这个环境里，看不到；如需访问，请用户在 App 设置里打开「访问手机文件」。"
@@ -143,9 +165,19 @@ object GuestSetup {
                     if (directEngine) "${rootfs.canonicalPath}/root/.dsh/dsh-app/diagnostics.md"
                     else "\$DSH_HOME/dsh-app/diagnostics.md",
                 )
+            val managed = "$AGENTS_BEGIN\n$text\n$AGENTS_END"
+            val begin = existing?.indexOf(AGENTS_BEGIN) ?: -1
+            val end = if (begin >= 0) existing!!.indexOf(AGENTS_END, begin + AGENTS_BEGIN.length) else -1
+            val result = when {
+                existing == null -> managed
+                begin >= 0 && end >= 0 && existing.indexOf(AGENTS_BEGIN, begin + AGENTS_BEGIN.length) < 0 && existing.indexOf(AGENTS_END, end + AGENTS_END.length) < 0 ->
+                    existing.substring(0, begin) + managed + existing.substring(end + AGENTS_END.length)
+                begin >= 0 || existing.contains(AGENTS_END) -> return
+                knownLegacyAgents(existing) -> managed
+                else -> existing + (if (existing.endsWith("\n")) "\n" else "\n\n") + managed
+            }
             file.parentFile?.mkdirs()
-            // Resolve tawc tokens for reading only; atomic replacement keeps backups unchanged.
-            if (existing != text) SafeMode.writeAtomic(file.canonicalFile, text)
+            if (existing != result) SafeMode.writeAtomic(file.canonicalFile, result)
         } catch (_: Exception) {
         }
     }

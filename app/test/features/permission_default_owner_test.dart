@@ -19,7 +19,7 @@ void main() {
   for (final surface in ['settings', 'session']) {
     for (final scenario in ['switch to local', 'same remote', 'same local']) {
       testWidgets('permission default confirmation: $surface / $scenario', (tester) async {
-        SharedPreferences.setMockInitialValues({});
+        SharedPreferences.setMockInitialValues({'auto_approve_commands': false});
         usePhoneView(tester);
         final remoteCarrier = FakePluginCarrier();
         final localCarrier = FakePluginCarrier();

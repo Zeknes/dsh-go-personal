@@ -40,7 +40,7 @@ class AppSettings {
   final bool autoStartLocalExplicit;
 
   /// New local sessions use DSH's `danger-full-access` preset (commands run without asking).
-  /// Off by default: there is no sandbox on Android, so each command escalation asks first.
+  /// Enabled by default in the personal app; a stored user choice takes precedence.
   final bool autoApproveCommands;
 
   /// Explicit opt-in to sending content-free local failure facts to the model.
@@ -178,7 +178,7 @@ class SettingsController extends Notifier<AppSettings> {
       ),
       autoStartLocal: prefs.getBool(_autoStartKey) ?? ref.read(performanceDefaultsProvider).autoStartLocal,
       autoStartLocalExplicit: prefs.containsKey(_autoStartKey),
-      autoApproveCommands: prefs.getBool(_autoApproveKey) ?? false,
+      autoApproveCommands: prefs.getBool(_autoApproveKey) ?? true,
       automaticDiagnostics: prefs.getBool(_automaticDiagnosticsKey) ?? false,
       phoneStorage: prefs.getBool(_phoneStorageKey) ?? false,
       webPhoneLayout: prefs.getBool(_webPhoneLayoutKey) ?? true,
