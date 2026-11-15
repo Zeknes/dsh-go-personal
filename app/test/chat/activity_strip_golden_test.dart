@@ -122,10 +122,54 @@ void main() {
       expect(find.text('进度 3/5'), findsOneWidget);
       // The clock is the turn's, not the step's.
       expect(find.text('0:47'), findsNWidgets(2));
-      expect(find.text('修复登录按钮的重复提交'), findsOneWidget);
+      expect(find.text('修复登录按钮的重复提交'), findsNothing);
       for (final strip in tester.widgetList<ActivityStrip>(find.byType(ActivityStrip))) {
         expect(tester.getSize(find.byWidget(strip)).height, 36);
       }
+    });
+
+    testWidgets('compact thinking and bounded tool detail leave room for accessory', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(320, 400);
+      addTearDown(tester.view.reset);
+      const long = 'a very long real tool target that must stay on one line and be truncated safely';
+      await tester.pumpWidget(
+        testApp(
+          Scaffold(
+            body: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: ActivityStrip(activity: act(ActivityKind.thinking, '思考中')),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('完全权限'),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ActivityStrip(activity: act(ActivityKind.tool, '读取', detail: long)),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('权限'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await pumpFrames(tester, 4);
+      expect(tester.getSize(find.byType(ActivityStrip).first).width, lessThan(200));
+      final text = tester.widget<Text>(find.text(long));
+      expect(text.maxLines, 1);
+      expect(text.overflow, TextOverflow.ellipsis);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('the tail paints in its own layer inside the glass', (tester) async {
@@ -135,52 +179,12 @@ void main() {
       expect(tester.widget<RepaintBoundary>(boundary).child, isA<WhaleTail>());
     });
 
-    testWidgets('the copy holds for its window, then moves on', (tester) async {
-      final a = act(ActivityKind.thinking, '思考中', ago: Duration.zero);
-      await pumpSheet(tester, [ActivityStrip(activity: a, speedLevel: 2)]);
-      String shown() => activityFlavor(a, runClock())!.text;
-      final first = shown();
-      expect(find.text(first), findsOneWidget);
-      for (var s = 1; s <= 3; s++) {
-        runClock = () => now.add(Duration(seconds: s));
-        await tester.pump(const Duration(seconds: 1));
-        expect(find.text(first), findsOneWidget);
-      }
-      runClock = () => now.add(const Duration(seconds: 4, milliseconds: 100));
-      await tester.pump(const Duration(seconds: 1));
-      await pumpFrames(tester, 3);
-      expect(find.text(first), findsNothing);
-      expect(find.text(shown()), findsOneWidget);
-    });
-
-    testWidgets('on screen, the next window never repeats the line before (ADJ-COPY)', (tester) async {
-      // A retry that starts with its turn (seed 0) used to show the same line
-      // at 16 s and 20 s.
-      final a = RunActivity(kind: ActivityKind.retry, title: '重试中', since: now, turnStart: now);
-      runClock = () => now.add(const Duration(seconds: 12));
-      await pumpSheet(tester, [ActivityStrip(activity: a, speedLevel: 2)]);
-      String onScreen() {
-        final texts = [
-          for (final line in retryPhrases)
-            if (find.text(line).evaluate().isNotEmpty) line,
-        ];
-        expect(texts, hasLength(1));
-        return texts.single;
-      }
-
-      var before = onScreen();
-      for (var s = 13; s <= 40; s++) {
-        runClock = () => now.add(Duration(seconds: s, milliseconds: 100));
-        await tester.pump(const Duration(seconds: 1));
-        await pumpFrames(tester, 3);
-        final here = onScreen();
-        if (s % 4 == 0) {
-          expect(here, isNot(before), reason: 'window starting at $s s');
-        } else {
-          expect(here, before, reason: 'inside the window, at $s s');
-        }
-        before = here;
-      }
+    testWidgets('thinking never shows decorative copy or narration', (tester) async {
+      await pumpSheet(tester, [ActivityStrip(activity: act(ActivityKind.thinking, '思考中', narration: '内部推理'))]);
+      await tester.pump(const Duration(seconds: 8));
+      expect(find.text('思考中'), findsOneWidget);
+      expect(find.text('内部推理'), findsNothing);
+      expect(find.text('周末限定皮肤'), findsNothing);
     });
 
     testWidgets('long-press: this step and the speed, for a few seconds', (tester) async {
@@ -194,7 +198,7 @@ void main() {
       await tester.pump(ActivityStrip.statsFor);
       await pumpFrames(tester, 3);
       expect(find.textContaining('tokens/秒'), findsNothing);
-      expect(find.text('修复登录按钮的重复提交'), findsOneWidget);
+      expect(find.text('修复登录按钮的重复提交'), findsNothing);
       await tester.tap(find.byType(ActivityStrip));
       expect(taps, 1);
     });

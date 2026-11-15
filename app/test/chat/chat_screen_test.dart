@@ -403,7 +403,8 @@ void main() {
     // One row: the chip is as high as the strip, on its line, flush with the composer's right edge.
     expect(chip.top, strip.top);
     expect(chip.height, strip.height);
-    expect(chip.left - strip.right, DockStackMetrics.accessoryGap);
+    expect(chip.left - strip.right, greaterThanOrEqualTo(DockStackMetrics.accessoryGap));
+    expect(strip.width, lessThan(composer.width / 2));
     expect(chip.right, moreOrLessEquals(composer.right, epsilon: 0.01));
     // Its words first, then only its icons; read out whole all along.
     expect(find.text('自动允许中'), findsOneWidget);

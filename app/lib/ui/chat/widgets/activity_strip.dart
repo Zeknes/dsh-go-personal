@@ -1,6 +1,4 @@
-// The live "what is happening now" pill above the composer while a turn runs
-// (layer 1 of the run information): live status, the model's `⏵` narration,
-// rotating copy and easter eggs (see activity_copy.dart), and the turn clock.
+// The live status pill above the composer while a turn runs.
 
 import 'dart:async';
 
@@ -12,22 +10,21 @@ import '../../../l10n/l10n.dart';
 import '../../../state/chat_state.dart';
 import '../../../state/run_pulse.dart';
 import '../../theme/theme.dart';
-import '../activity_copy.dart';
 import '../run_info.dart';
 import 'live_clock.dart';
 import 'whale_tail.dart';
 
 /// 生成中,输入条正上方的一颗玻璃胶囊:鲸尾(游速 = 出字速度)+ 此刻在做
-/// 什么 + 一句自述或趣味文案 + 本轮用时,有待办时右端是进度。点一下看本轮
+/// 什么 + 实际工具摘要 + 本轮用时,有待办时右端是进度。点一下看本轮
 /// 轨迹;长按几秒内换成这一步的用时和估算速度。
 ///
 /// ```
 /// ( 🐋 跑  flutter test test/auth           0:19 │ 进度 3/5 ▰▰▰▱▱ )
-/// ( 🐋 思考中  脑子在冒烟                    0:07 )
+/// ( 🐋 思考中  0:07 )
 /// ```
 ///
 /// 只订阅 [runActivityOf] 的结果(值相等不重建)和 [RunPulse](换档、压缩
-/// 开始结束时才通知);走秒和文案轮换只重建文字那一段。
+/// 开始结束时才通知);走秒只重建文字那一段。
 class ActivityStripSlot extends ConsumerStatefulWidget {
   const ActivityStripSlot({super.key, required this.sessionId, this.onTap, this.todoProgress = true});
 
@@ -116,12 +113,15 @@ class _ActivityStripSlotState extends ConsumerState<ActivityStripSlot> with Sing
           builder: (context, child) => Align(alignment: Alignment.topCenter, heightFactor: _height.value, child: child),
           child: Padding(
             padding: const EdgeInsets.only(bottom: 6),
-            child: ActivityStrip(
-              activity: strip,
-              speedLevel: _lastLevel,
-              tokensPerSecond: () => pulse.tokensPerSecond,
-              onTap: shown == null ? null : widget.onTap,
-              todoProgress: widget.todoProgress,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: ActivityStrip(
+                activity: strip,
+                speedLevel: _lastLevel,
+                tokensPerSecond: () => pulse.tokensPerSecond,
+                onTap: shown == null ? null : widget.onTap,
+                todoProgress: widget.todoProgress,
+              ),
             ),
           ),
         );
@@ -195,71 +195,76 @@ class _ActivityStripState extends State<ActivityStrip> {
 
     return Semantics(
       button: widget.onTap != null,
-      label: '${a.title} ${a.detail}',
+      label: [a.title, if (a.kind == ActivityKind.tool || a.kind == ActivityKind.retry) a.detail].join(' '),
       onTapHint: l10n.chatViewTurnTrace,
       onTap: widget.onTap,
       onLongPress: _showStats,
       excludeSemantics: true,
-      child: GlassSurface(
-        tier: GlassTier.chrome,
-        stadium: true,
-        // One backdrop sample with the deck's other bars (chat page).
-        grouped: true,
-        onTap: widget.onTap,
-        onLongPress: _showStats,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 36),
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(end: widget.whale ? 1 : 0),
-            duration: AppMotion.of(context, AppMotion.standard),
-            curve: AppMotion.std,
-            builder: (context, t, _) => Padding(
-              // 9 + whale: the tail's own air makes up the difference; without
-              // it both ends are 14.
-              padding: EdgeInsets.fromLTRB(14 - 5 * t, 6, 14, 6),
-              child: Row(
-                children: [
-                  if (t > 0)
-                    ClipRect(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: t,
-                        child: Opacity(
-                          opacity: t,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // 自己一层:鲸尾每帧在动,不连累玻璃里的其余内容重绘。
-                              RepaintBoundary(
-                                child: WhaleTail(level: widget.speedLevel, color: whale, height: 20),
-                              ),
-                              const SizedBox(width: 6),
-                            ],
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: a.kind == ActivityKind.tool && a.detail.isNotEmpty ? 260 : 0),
+        child: GlassSurface(
+          tier: GlassTier.chrome,
+          stadium: true,
+          // One backdrop sample with the deck's other bars (chat page).
+          grouped: true,
+          onTap: widget.onTap,
+          onLongPress: _showStats,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 36),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(end: widget.whale ? 1 : 0),
+              duration: AppMotion.of(context, AppMotion.standard),
+              curve: AppMotion.std,
+              builder: (context, t, _) => Padding(
+                // 9 + whale: the tail's own air makes up the difference; without
+                // it both ends are 14.
+                padding: EdgeInsets.fromLTRB(14 - 5 * t, 6, 14, 6),
+                child: Row(
+                  mainAxisSize: a.kind == ActivityKind.tool && a.detail.isNotEmpty ? MainAxisSize.max : MainAxisSize.min,
+                  children: [
+                    if (t > 0)
+                      ClipRect(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: t,
+                          child: Opacity(
+                            opacity: t,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // 自己一层:鲸尾每帧在动,不连累玻璃里的其余内容重绘。
+                                RepaintBoundary(
+                                  child: WhaleTail(level: widget.speedLevel, color: whale, height: 20),
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  Expanded(
-                    child: LiveElapsed(
-                      since: a.turnStart ?? a.since,
-                      skew: a.skew,
-                      builder: (context, elapsed) => _Line(
-                        activity: a,
-                        elapsed: elapsed,
-                        stats: _statsTimer == null ? null : _stats(a, widget.tokensPerSecond?.call() ?? 0),
+                    Flexible(
+                      fit: a.kind == ActivityKind.tool && a.detail.isNotEmpty ? FlexFit.tight : FlexFit.loose,
+                      child: LiveElapsed(
+                        since: a.turnStart ?? a.since,
+                        skew: a.skew,
+                        builder: (context, elapsed) => _Line(
+                          activity: a,
+                          elapsed: elapsed,
+                          stats: _statsTimer == null ? null : _stats(a, widget.tokensPerSecond?.call() ?? 0),
+                        ),
                       ),
                     ),
-                  ),
-                  if (widget.todoProgress && a.todoTotal > 0) ...[
-                    Container(
-                      width: 0.5,
-                      height: 14,
-                      margin: const EdgeInsets.symmetric(horizontal: 10),
-                      color: theme.colorScheme.outlineVariant,
-                    ),
-                    TodoProgress(done: a.todoDone, total: a.todoTotal),
+                    if (widget.todoProgress && a.todoTotal > 0) ...[
+                      Container(
+                        width: 0.5,
+                        height: 14,
+                        margin: const EdgeInsets.symmetric(horizontal: 10),
+                        color: theme.colorScheme.outlineVariant,
+                      ),
+                      TodoProgress(done: a.todoDone, total: a.todoTotal),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -292,9 +297,7 @@ class _Line extends StatelessWidget {
     final dsh = DshColors.of(context);
     final a = activity;
 
-    // Three tiers: what (title, onSurface 600) › on what (detail, secondary)
-    // › colour (narration secondary, fun copy and the clock tertiary).
-    final flavor = stats != null ? null : activityFlavor(a, runClock());
+    final detail = a.kind == ActivityKind.tool || a.kind == ActivityKind.retry ? a.detail : '';
     final secondary = colors.onSurfaceVariant;
     final body = theme.textTheme.bodySmall?.copyWith(height: 1.3);
     final spans = <TextSpan>[
@@ -304,19 +307,12 @@ class _Line extends StatelessWidget {
           style: body?.copyWith(color: secondary),
         )
       else ...[
-        if (a.detail.isNotEmpty)
+        if (detail.isNotEmpty)
           TextSpan(
-            text: a.detail,
+            text: detail,
             style: a.detailIsCode
                 ? AppType.mono(size: 12, color: secondary, height: 1.3)
                 : body?.copyWith(color: secondary),
-          ),
-        if (flavor != null)
-          TextSpan(
-            text: a.detail.isNotEmpty ? ' · ${flavor.text}' : flavor.text,
-            style: body?.copyWith(
-              color: flavor.source == FlavorSource.narration && a.detail.isEmpty ? secondary : dsh.textTertiary,
-            ),
           ),
       ],
     ];
@@ -331,19 +327,22 @@ class _Line extends StatelessWidget {
     );
 
     return Row(
+      mainAxisSize: second.isNotEmpty ? MainAxisSize.max : MainAxisSize.min,
       children: [
-        Expanded(
+        Flexible(
+          fit: second.isNotEmpty ? FlexFit.tight : FlexFit.loose,
           child: AnimatedSwitcher(
             duration: AppMotion.of(context, AppMotion.quick),
             layoutBuilder: (current, previous) =>
-                Stack(alignment: Alignment.centerLeft, children: [...previous, ?current]),
+                Stack(alignment: Alignment.centerLeft, fit: StackFit.passthrough, children: [...previous, ?current]),
             child: Row(
               key: ValueKey('${a.title}\u0000$second'),
+              mainAxisSize: second.isNotEmpty ? MainAxisSize.max : MainAxisSize.min,
               children: [
-                Text(a.title, style: titleStyle),
+                Text(a.title, style: titleStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
                 if (second.isNotEmpty) ...[
                   const SizedBox(width: 6),
-                  Flexible(
+                  Expanded(
                     child: Text.rich(
                       TextSpan(children: spans),
                       maxLines: 1,
