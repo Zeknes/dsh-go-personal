@@ -20,7 +20,7 @@ from unittest import mock
 
 import apk_delta
 from build_number import MAX_VERSION_CODE
-from release_assets import BADGING_RE, ReleaseError, check_abis, find_aapt2, patch_from, previous_releases, published_apk, release_build
+from release_assets import BADGING_RE, ReleaseError, apk_version, check_abis, find_aapt2, patch_from, previous_releases, published_apk, release_build
 
 # Stands in for gh: `release list` prints $FAKE_RELEASES, `release download`
 # copies the asset files from $FAKE_ASSETS/<tag>/; every call goes to $FAKE_LOG.
@@ -167,7 +167,16 @@ class ReleaseBuildTest(unittest.TestCase):
         line = ("package: name='io.github.ccch1mneyyy.dsh_app' versionCode='10251234' versionName='1.2.0-beta.1' "
                 "platformBuildVersionName='16'\nminSdkVersion:'26'\n")
         m = BADGING_RE.search(line)
-        self.assertEqual((m.group(1), m.group(2)), ("10251234", "1.2.0-beta.1"))
+        self.assertEqual(m.groups(), ("io.github.ccch1mneyyy.dsh_app", "10251234", "1.2.0-beta.1"))
+
+    def test_apk_package_must_be_pure(self):
+        line = "package: name='{}' versionCode='11152141' versionName='1.0.16'"
+        with mock.patch("release_assets.subprocess.run") as run:
+            run.return_value.stdout = line.format("io.github.zeknes.dsh_pure")
+            self.assertEqual(apk_version("aapt2", pathlib.Path("pure.apk")), ("1.0.16", 11152141))
+            run.return_value.stdout = line.format("io.github.ccch1mneyyy.dsh_app")
+            with self.assertRaisesRegex(ReleaseError, "is not"):
+                apk_version("aapt2", pathlib.Path("upstream.apk"))
 
 
 class DeltaTest(unittest.TestCase):

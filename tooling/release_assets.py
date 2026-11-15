@@ -42,7 +42,8 @@ FLAVORS = ("arm64", "x64")
 FLAVOR_ABI = {"arm64": "arm64-v8a", "x64": "x86_64"}
 REPO = "Zeknes/dsh-pure"
 VERSION_RE = re.compile(r"^(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\+(\d+))?$")
-BADGING_RE = re.compile(r"^package: .*?\bversionCode='(\d*)' versionName='([^']*)'", re.MULTILINE)
+BADGING_RE = re.compile(r"^package: name='([^']+)' .*?\bversionCode='(\d*)' versionName='([^']*)'", re.MULTILINE)
+APPLICATION_ID = "io.github.zeknes.dsh_pure"
 CACHE = pathlib.Path.home() / ".cache" / "dshgo-release" / "apk"
 # A patch this big saves too little to be worth a second download path.
 PATCH_LIMIT = 0.6
@@ -100,7 +101,9 @@ def apk_version(aapt2: str, path: pathlib.Path) -> tuple[str, int]:
     match = BADGING_RE.search(out)
     if not match:
         raise ReleaseError(f"{path}: aapt2 could not read its manifest")
-    return match.group(2), int(match.group(1) or 0)
+    if match.group(1) != APPLICATION_ID:
+        raise ReleaseError(f"{path}: package {match.group(1)!r} is not {APPLICATION_ID!r}")
+    return match.group(3), int(match.group(2) or 0)
 
 
 def release_build(name: str, expected: int | None, apks: dict[str, tuple[str, int]]) -> int:
@@ -303,7 +306,7 @@ def main() -> None:
         "schema": 1,
         "version": f"{name}+{build}",
         "tag": tag,
-        "title": f"DSH Go {name}",
+        "title": f"DSH Pure {name}",
         "publishedAt": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "notes": args.notes.read_text(encoding="utf-8").strip() if args.notes else "",
         "page": f"https://github.com/{REPO}/releases/tag/{tag}",
@@ -317,13 +320,13 @@ def main() -> None:
         built = f"{decode(build):%Y-%m-%d %H:%M} UTC+8"
     except ValueError:
         built = "custom build number"
-    print(f"DSH Go {name}+{build} ({built})")
+    print(f"DSH Pure {name}+{build} ({built})")
     print(f"{args.out}:")
     for line in sums:
         print("  " + line)
     print("  update.json")
     notes = f" --notes-file {args.notes}" if args.notes else ""
-    print(f"\ngh release create {tag} {args.out}/* --repo {REPO} --title 'DSH Go {name}'{notes}")
+    print(f"\ngh release create {tag} {args.out}/* --repo {REPO} --title 'DSH Pure {name}'{notes}")
 
 
 if __name__ == "__main__":
