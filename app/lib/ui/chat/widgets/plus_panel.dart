@@ -348,12 +348,23 @@ class _SessionPermissionPageState extends ConsumerState<SessionPermissionPage> {
   /// Picked here and not yet in the log.
   String? _picked;
   bool _busy = false;
+  bool _confirming = false;
+
+  Future<bool> _confirm(String value) async {
+    if (_confirming) return false;
+    _confirming = true;
+    try {
+      return await confirmPermission(context, value);
+    } finally {
+      _confirming = false;
+    }
+  }
 
   void _toast(String text) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(text)));
 
   Future<void> _pick(String value, String? current) async {
     if (_busy || value == current) return;
-    if (!await confirmPermission(context, value) || !mounted) return;
+    if (!await _confirm(value) || !mounted || _busy) return;
     setState(() {
       _busy = true;
       _picked = value;
@@ -372,7 +383,7 @@ class _SessionPermissionPageState extends ConsumerState<SessionPermissionPage> {
     final owner = ref.read(activeHostProvider);
     final client = ref.read(activeConnectionProvider).value?.client;
     if (client == null || _busy) return;
-    if (!await confirmPermission(context, value) || !mounted || ref.read(activeHostProvider) != owner) return;
+    if (!await _confirm(value) || !mounted || ref.read(activeHostProvider) != owner || _busy) return;
     setState(() => _busy = true);
     final problem = await writePermissionDefault(ref, client, value, revision);
     if (!mounted) return;

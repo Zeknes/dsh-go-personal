@@ -34,6 +34,8 @@
   "featuresScheduleSummaryEnded": "Ended · Ran {time}",
   "featuresJobElapsed": "Running for {span}",
   "featuresJobDuration": "Took {span}",
+  "featuresPermissionChangeTitle": "Switch to {mode}?",
+  "@featuresPermissionChangeTitle": {"placeholders": {"mode": {"type": "String"}}},
   "featuresPermissionReadOnly": "Read only",
   "featuresPermissionWorkspaceWrite": "Workspace write",
   "featuresPermissionFullAccess": "Full access",

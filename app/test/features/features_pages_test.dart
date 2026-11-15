@@ -8,7 +8,6 @@ import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/features_state.dart';
 import 'package:dsh_app/state/sessions_state.dart';
 import 'package:dsh_app/state/settings_state.dart';
-import 'package:dsh_app/ui/common/app_sheet.dart';
 import 'package:dsh_app/ui/remote/remote_screen.dart';
 import 'package:dsh_app/ui/settings/search/settings_search_page.dart';
 import 'package:dsh_app/ui/settings/settings_screen.dart';
@@ -443,22 +442,23 @@ void main() {
       // First group: current conversation.
       await tester.tap(find.text('工作区内修改').first);
       await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '确认'));
+      await tester.pumpAndSettle();
       expect(carrier.argsOf('commands/execute').single, {
         'agentId': 's1',
         'line': '/permission workspace-write',
         'submittedAttachments': <Object?>[],
       });
 
-      // Full access asks first.
-      await tester.tap(find.text('完全权限').last);
+      await tester.tap(find.text('仅可查看').last);
       await tester.pumpAndSettle();
-      expect(find.text('开启完全权限？'), findsOneWidget);
-      expect(find.widgetWithText(FilledButton, '开启完全权限'), findsOneWidget);
-      await tester.tap(find.descendant(of: find.byType(SheetHeader), matching: find.byType(SheetIconButton)));
+      expect(find.text('切换为仅可查看？'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, '取消'));
       await tester.pumpAndSettle();
       expect(carrier.argsOf('settings/mutate'), isEmpty);
-
       await tester.tap(find.text('仅可查看').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '确认'));
       await tester.pumpAndSettle();
       expect(carrier.argsOf('settings/mutate').single, {
         'ns': 'permission',

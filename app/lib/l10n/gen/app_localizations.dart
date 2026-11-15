@@ -13352,6 +13352,12 @@ abstract class L10n {
   /// **'用时 {span}'**
   String featuresJobDuration(String span);
 
+  /// No description provided for @featuresPermissionChangeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换为{mode}？'**
+  String featuresPermissionChangeTitle(String mode);
+
   /// No description provided for @featuresPermissionReadOnly.
   ///
   /// In zh, this message translates to:

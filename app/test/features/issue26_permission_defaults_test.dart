@@ -82,9 +82,8 @@ void main() {
     expect(find.text('自动审查'), findsOneWidget);
     await tester.tap(find.text('自动审查'));
     await tester.pumpAndSettle();
-    // First time: said once, 不再提示 ticked.
-    expect(find.text('开启自动审查？'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, '开启自动审查'));
+    expect(find.text('切换为自动审查？'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, '确认'));
     await tester.pumpAndSettle();
     expect(carrier.argsOf('commands/execute').single['line'], '/permission auto');
     expect(carrier.argsOf('settings/mutate'), isEmpty);

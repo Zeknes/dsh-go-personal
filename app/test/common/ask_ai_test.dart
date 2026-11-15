@@ -13,7 +13,6 @@ import 'package:dsh_app/state/compose_inbox.dart';
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/hosts_state.dart';
 import 'package:dsh_app/state/settings_state.dart';
-import 'package:dsh_app/ui/common/app_sheet.dart';
 import 'package:dsh_app/ui/common/ask_ai.dart';
 import 'package:dsh_app/ui/common/list_page_row.dart';
 import 'package:dsh_app/ui/common/risk_notice.dart';
@@ -280,28 +279,14 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('完全权限 for new conversations asks every time; × leaves it off', (tester) async {
+    testWidgets('完全权限 for new conversations switches without a prompt', (tester) async {
       await pumpPermission(tester);
-      Future<void> pick() async {
-        final row = find.text('完全权限');
-        await tester.ensureVisible(row);
-        await tester.pumpAndSettle();
-        await tester.tap(row);
-        await tester.pumpAndSettle();
-      }
-
-      await pick();
-      final notice = tester.widget<RiskNoticeSheet>(find.byType(RiskNoticeSheet)).notice;
-      expect(notice.id, 'permission.full-access');
-      expect(find.text('开启完全权限？'), findsOneWidget);
-      await tester.tap(find.descendant(of: find.byType(SheetHeader), matching: find.byType(SheetIconButton)));
+      final row = find.text('完全权限');
+      await tester.ensureVisible(row);
       await tester.pumpAndSettle();
-      expect(_container(tester).read(settingsProvider).autoApproveCommands, isFalse);
-
-      await pick();
-      await tester.tap(find.byKey(const ValueKey('risk-confirm')));
+      await tester.tap(row);
       await tester.pumpAndSettle();
-      // On this phone, 完全权限 for new conversations is the app's own switch.
+      expect(find.byType(RiskNoticeSheet), findsNothing);
       expect(_container(tester).read(settingsProvider).autoApproveCommands, isTrue);
     });
 

@@ -166,6 +166,9 @@ void main() {
       ]);
       await tester.tap(find.text('工作区内修改'));
       await tester.pumpAndSettle();
+      expect(find.text('切换为工作区内修改？'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, '确认'));
+      await tester.pumpAndSettle();
       expect(carrier.argsOf('settings/mutate').single['expectedRevision'], 2);
       final container = ProviderScope.containerOf(tester.element(find.byType(PermissionPage)));
       expect(container.read(settingsProvider).autoApproveCommands, conflict);
@@ -186,9 +189,7 @@ void main() {
     ]);
     await tester.tap(find.text('完全权限'));
     await tester.pumpAndSettle();
-    expect(find.text('开启完全权限？'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, '开启完全权限'));
-    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
     final container = ProviderScope.containerOf(tester.element(find.byType(PermissionPage)));
     expect(container.read(settingsProvider).autoApproveCommands, isTrue);
     expect(carrier.argsOf('settings/mutate'), isEmpty);

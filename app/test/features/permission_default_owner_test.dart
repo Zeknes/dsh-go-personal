@@ -37,20 +37,21 @@ void main() {
           carrier.handlers['permissionPresets/catalog'] = (_) => {
             'options': [
               {'value': 'workspace-write', 'name': 'workspace-write'},
+              {'value': 'read-only', 'name': 'read-only'},
               {'value': 'danger-full-access', 'name': 'danger-full-access'},
             ],
-            'defaultPreset': 'workspace-write',
+            'defaultPreset': 'danger-full-access',
           };
           carrier.handlers['session/projections'] = (_) => {
             'kind': 'sequenced',
             'asOfSeq': 1,
             'values': {
-              'permissions': {'currentValue': 'danger-full-access'},
+              'permissions': {'currentValue': 'read-only'},
             },
           };
           carrier.handlers['settings/mutate'] = (_) => {
             'ns': 'permission',
-            'value': {'defaultPreset': 'danger-full-access'},
+            'value': {'defaultPreset': 'read-only'},
             'revision': 5,
           };
         }
@@ -60,7 +61,7 @@ void main() {
                 ? const PermissionPage()
                 : const Scaffold(body: SessionPermissionPage(sessionId: 's1')),
             overrides: [
-              sessionModesProvider.overrideWith((ref, id) => const SessionModes(preset: 'danger-full-access')),
+              sessionModesProvider.overrideWith((ref, id) => const SessionModes(preset: 'read-only')),
               activeConnectionProvider.overrideWith((ref) {
                 final host = ref.watch(activeHostProvider);
                 return AsyncData(
@@ -81,9 +82,9 @@ void main() {
         if (scenario != 'same local') container.read(activeHostProvider.notifier).select(const HostRef.ssh('pc'));
         await tester.pumpAndSettle();
         expect(container.read(settingsProvider).autoApproveCommands, isFalse);
-        await tester.tap(find.text(surface == 'settings' ? '完全权限' : '设为新对话默认').last);
+        await tester.tap(find.text(surface == 'settings' ? '仅可查看' : '设为新对话默认').last);
         await tester.pumpAndSettle();
-        expect(find.text('开启完全权限？'), findsOneWidget);
+        expect(find.text('切换为仅可查看？'), findsOneWidget);
         if (scenario == 'switch to local') {
           tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
           tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
@@ -93,18 +94,18 @@ void main() {
           tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
           tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
           await tester.pumpAndSettle();
-          expect(find.text('开启完全权限？'), findsOneWidget);
+          expect(find.text('切换为仅可查看？'), findsOneWidget);
           expect(container.read(activeConnectionProvider).value!.client, same(local));
         }
-        await tester.tap(find.widgetWithText(FilledButton, '开启完全权限'));
+        await tester.tap(find.widgetWithText(FilledButton, '确认'));
         await tester.pumpAndSettle();
         final prefs = await SharedPreferences.getInstance();
         expect(
           [container.read(settingsProvider).autoApproveCommands, prefs.getBool('auto_approve_commands') ?? false],
-          [scenario == 'same local', scenario == 'same local'],
+          [false, false],
         );
         expect(remoteCarrier.argsOf('settings/mutate').length, scenario == 'same remote' ? 1 : 0);
-        expect(localCarrier.argsOf('settings/mutate'), isEmpty);
+        expect(localCarrier.argsOf('settings/mutate').length, scenario == 'same local' ? 1 : 0);
         expect(tester.takeException(), isNull);
       });
     }

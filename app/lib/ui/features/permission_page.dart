@@ -21,6 +21,7 @@ import '../../state/engine_control.dart';
 import '../../state/hosts_state.dart';
 import '../../state/phone_state.dart';
 import '../common/ask_ai.dart';
+import '../common/app_dialog.dart';
 import '../common/list_page_row.dart';
 import '../common/risk_notice.dart';
 import '../phone/phone_control_screen.dart' show PhoneConfirmModeText;
@@ -54,13 +55,21 @@ Future<String?> writePermissionDefault(WidgetRef ref, DshClient client, String v
   }
 }
 
-/// Full access and auto review skip confirmations: they ask first, like the
-/// official picker.
-Future<bool> confirmPermission(BuildContext context, String value) => switch (value) {
-  'danger-full-access' => confirmRisk(context, RiskNotices.fullAccess),
-  'auto' => confirmRisk(context, RiskNotices.autoReview),
-  _ => Future.value(true),
-};
+Future<bool> confirmPermission(BuildContext context, String value) async {
+  if (value == 'danger-full-access') return true;
+  final l10n = context.l10n;
+  return await showAppDialog<bool>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: Text(l10n.featuresPermissionChangeTitle(permissionName(value))),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
+            FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.commonConfirm)),
+          ],
+        ),
+      ) ??
+      false;
+}
 
 class PermissionPage extends ConsumerStatefulWidget {
   const PermissionPage({super.key, this.sessionId});
@@ -75,18 +84,26 @@ class PermissionPage extends ConsumerStatefulWidget {
 
 class _PermissionPageState extends ConsumerState<PermissionPage> {
   bool _busy = false;
+  bool _confirming = false;
 
   void _toast(String text) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(text)));
 
-  /// Full access (and auto review) skip confirmations: ask first, like the
-  /// official picker.
-  Future<bool> _confirm(String value) => confirmPermission(context, value);
+  Future<bool> _confirm(String value) async {
+    if (_confirming) return false;
+    _confirming = true;
+    try {
+      return await confirmPermission(context, value);
+    } finally {
+      _confirming = false;
+    }
+  }
 
   Future<void> _setCurrent(String value) async {
     final sessionId = widget.sessionId;
     final client = ref.read(activeConnectionProvider).value?.client;
+    final owner = ref.read(activeHostProvider);
     if (sessionId == null || client == null || _busy) return;
-    if (!await _confirm(value) || !mounted) return;
+    if (!await _confirm(value) || !mounted || ref.read(activeHostProvider) != owner || _busy) return;
     setState(() => _busy = true);
     try {
       final result = await client.setPermissionPreset(sessionId, value);
@@ -105,7 +122,7 @@ class _PermissionPageState extends ConsumerState<PermissionPage> {
     final state = ref.read(permissionStateProvider(widget.sessionId)).value;
     final allowed = state?.defaultOptions ?? state?.options.where((o) => o.value != 'auto');
     if (client == null || _busy || revision == null || allowed?.any((o) => o.value == value) != true) return;
-    if (!await _confirm(value) || !mounted || ref.read(activeHostProvider) != owner) return;
+    if (!await _confirm(value) || !mounted || ref.read(activeHostProvider) != owner || _busy) return;
     setState(() => _busy = true);
     try {
       final problem = await writePermissionDefault(ref, client, value, revision);
@@ -178,7 +195,7 @@ class _PermissionPageState extends ConsumerState<PermissionPage> {
           title: permissionName(o.value, o.name),
           subtitle: permissionHint(o.value, o.description),
           selected: o.value == selected,
-          onTap: _busy || onPick == null ? null : () => onPick(o.value),
+          onTap: _busy || onPick == null || o.value == selected ? null : () => onPick(o.value),
         ),
     ];
 

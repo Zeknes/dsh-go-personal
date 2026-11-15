@@ -3,7 +3,6 @@
 // through `/permission`, 计划模式 through `/plan` and `/plan off`, 确认方式
 // through `setPolicies`; and the permission pill on the composer's edge.
 
-import 'package:dsh_app/l10n/l10n.dart';
 import 'package:dsh_app/state/chat_state.dart';
 import 'package:dsh_app/state/features_state.dart';
 import 'package:dsh_app/state/risk_notice_store.dart';
@@ -181,21 +180,27 @@ void main() {
       expect(find.text('本对话的权限'), findsOneWidget);
       expect(find.text('新对话默认：工作区内修改'), findsOneWidget);
       await tester.tap(find.text('仅可查看'));
+      await tester.pumpAndSettle();
+      expect(find.text('切换为仅可查看？'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, '取消'));
+      await tester.pumpAndSettle();
+      expect(harness.controllers['s1']?.commandLines ?? const <String>[], isEmpty);
+      await tester.tap(find.text('仅可查看'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '确认'));
       await pumpFrames(tester);
       expect(harness.controllers['s1']!.commandLines, ['/permission read-only']);
       // Now looser than the default would not be; 只读 is offered as default.
       expect(find.text('设为新对话默认'), findsOneWidget);
     });
 
-    testWidgets('完全权限 asks first', (tester) async {
+    testWidgets('完全权限 switches without confirmation', (tester) async {
       final harness = await _openPanel(tester);
       await tester.tap(find.text('权限'));
       await pumpFrames(tester);
       await tester.tap(find.text('完全权限'));
       await tester.pumpAndSettle();
-      expect(harness.controllers['s1']?.commandLines ?? const <String>[], isEmpty);
-      await tester.tap(find.widgetWithText(FilledButton, appL10n.riskFullAccessAction));
-      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
       expect(harness.controllers['s1']!.commandLines, ['/permission danger-full-access']);
     });
 

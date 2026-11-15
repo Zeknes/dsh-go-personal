@@ -235,8 +235,7 @@ class NewChatOptions extends ConsumerWidget {
       ),
     );
     if (pick == null || pick == selected || !context.mounted || !current()) return;
-    // Full access and auto review ask once, as on the 权限 page.
-    if (pick != fallback && !await confirmPermission(context, pick)) return;
+    if (!await confirmPermission(context, pick)) return;
     if (!context.mounted || !current()) return;
     ref.read(pendingNewChatModesProvider.notifier).selectPermission(pick == fallback ? null : pick);
   }

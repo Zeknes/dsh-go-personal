@@ -7606,6 +7606,11 @@ class L10nEn extends L10n {
   }
 
   @override
+  String featuresPermissionChangeTitle(String mode) {
+    return 'Switch to $mode?';
+  }
+
+  @override
   String get featuresPermissionReadOnly => 'Read only';
 
   @override
