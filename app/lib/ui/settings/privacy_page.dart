@@ -1,5 +1,5 @@
 // 隐私与分享: what leaves this phone — the links you shared, a configuration
-// to share, anonymous usage statistics, and (when the host has it) the chat
+// to share and (when the host has it) the chat
 // log upload to DeepSeek.
 
 import 'dart:async';
@@ -15,7 +15,6 @@ import '../engine_settings/schema_form.dart';
 import '../share_code/profile_share_sheet.dart';
 import '../shell/page_frame.dart';
 import 'settings_widgets.dart';
-import 'usage_stats_section.dart';
 
 class PrivacyPage extends ConsumerWidget {
   const PrivacyPage({super.key});
@@ -33,7 +32,6 @@ class PrivacyPage extends ConsumerWidget {
           title: l10n.hubPrivacySharing,
           children: [SettingsTile(spot: Spots.shareConfig, onTap: () => unawaited(showShareProfileSheet(context)))],
         ),
-        const UsageStatsSection(),
         SettingsSection(
           title: l10n.phoneLocalOcrTitle,
           footer: Text('${l10n.phoneLocalOcrDisclosure}\n\n${l10n.phoneLocalOcrDetails}'),

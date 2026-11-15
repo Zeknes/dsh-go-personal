@@ -1,7 +1,7 @@
 {
   "name": "dshgo-share",
   "private": true,
-  "description": "Plugin market, usage, and download routes for dsh-go.",
+  "description": "Plugin market and download routes for dsh-go.",
   "type": "module",
   "scripts": {
     "build": "node scripts/build-site.mjs",

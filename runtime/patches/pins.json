@@ -1873,6 +1873,22 @@
           "before": "a1ad048cbbb7caefe5471c583f076aa8e393f534efbc5b11b625308096efdace"
         }
       }
+    },
+    "personal-remove-telemetry.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-session-telemetry-otel/lib/index.js": {
+          "before": "20dae4a8a0cf4855dc5150066cc727249eb9b8107b1686367dad13a5a5a50b59",
+          "after": "98f04edea6c1b8c11fcdda1a91f95e2b426b9d81bbec0b8e2f114bccfed995bf"
+        },
+        "node_modules/@deepseek-ai/dsh-host-product-telemetry-otel/lib/index.js": {
+          "before": "c25a50bdd837b2b77599f020868087077140fd699ab07f82ecb4265915d3619a",
+          "after": "78636bdf8feed6c1c45987f0c2bf5c48e72b4e3b9606d83f5b58c01ecbff28cc"
+        },
+        "node_modules/@deepseek-ai/dsh-client-product-analytics/lib/index.js": {
+          "before": "974eb396bc5628818282358f03cff32fe0463519dd7cf4a80eeb740754bc0112",
+          "after": "11309571b41eac5c57246c222f725004804c009c9cdb1bcc019dd38e2eca5645"
+        }
+      }
     }
   },
   "schema": 1

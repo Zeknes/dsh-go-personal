@@ -9,10 +9,15 @@
 - 个人测试 APK 使用 Ubuntu 26.04.1、Node.js 24.22.1、DSH 0.2.2-rc.1 和 Termux PRoot 5.1.107.102。新装使用新基础系统，旧 Ubuntu 24.04 运行时不支持原地跨基础系统升级。
 - 已交付测试 APK：ARM64，版本 `1.0.16`、versionCode `11151209`，SHA-256 `c7569f5cc6490f7e156dc2d6180118b17f465eff93be8e122ffbbf02a2fcd40c`。实际构建源码是独立集成快照 `d1ac113fe91db9840ca18ddf17cd869f0608589e`，来自 App `e5044472a7bb9e2036f86c022b6b5f3fdfba4410` 和 runtime `a5337c67cc8902f0a4829b8a354658e4c0549c50`，另修正 runtime 输入测试中的旧版本断言；源码 bundle SHA-256 `4855a600695fccb3a7751a9a2c790260eee77a2629b6284de361b5d1ad96df4f`。该 runtime 尚未合入个人 main。
 - 上述包已传本人网盘并核验；未公开发布，也未完成 Android 真机启动验收。
+- 删除匿名统计后的测试包：ARM64、版本 `1.0.16`、versionCode `11151526`，SHA-256 `c64efeec19d69cab3ffe11c003af82d0a72f651f1e2899f8d8cbdd606e13a8df`；同一 Android Debug 证书签名。尚未上传或真机启动验收。
 
 ## 签名
 
 上述 APK 是 release 编译、Android Debug 证书签名的测试包，签名算法 RSA 2048，证书 SHA-256 `5fc40a6b251d553140e10d968fbf7d04f96ce18a0dacb72435d072a69bed847f`。构建机 ROG 的默认 Android 调试签名文件路径为 `/home/zek/.android/debug.keystore`；后续覆盖安装必须由构建工具使用同一密钥，构建后再次核对证书指纹。未确认该密钥已安全备份；遗失后不能保证覆盖更新。不要将密钥文件、密码或配置提交到仓库。构建机的调试密钥文件权限已由 0644 收紧为 0600；勿将其视为正式发行密钥。
+
+## 匿名统计删除
+
+App 原匿名使用统计的设备信息、账本、发送、前后台调度及开关已移除；升级启动时清理旧 `usage_stats_` 偏好。本地 token、费用和诊断不属于该上报链。worker 源码移除 `/api/usage/v1` 及专用统计绑定、报表，未部署线上服务；下载和更新检查计数仍保留。引擎对 session telemetry、桌面产品遥测及客户端产品分析的采集和发送实现打补丁移除，未删除用户主动使用的本地功能。Google ML Kit 是独立 SDK，仍可能发送其自身统计，不受本次删除控制。DSH 的官方模型请求所携带的会话日志 `session-log-deepseek` 是独立功能，不是 App 匿名统计；其仍可能默认启用，请用户按需关闭。
 
 ## 本机指令更新
 

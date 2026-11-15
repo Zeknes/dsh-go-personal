@@ -1,4 +1,4 @@
-// Plugin market, usage, and download routes.
+// Plugin market and download routes.
 
 import { json } from './api';
 import type { Env } from './env';
@@ -6,7 +6,6 @@ import { beta, isBetaPath } from './beta';
 export { BetaGuard } from './beta-guard';
 import { accessMode, download, isDownloadPath } from './download';
 export { StatsSalt } from './stats';
-import { usage } from './usage';
 import { githubStars } from './github';
 import { isMarketPath, market, publishMarket } from './market';
 import type { Ctx } from './files';
@@ -22,7 +21,6 @@ async function route(request: Request, env: Env, ctx: Ctx): Promise<Response> {
   const method = request.method;
 
   if (path.startsWith('/api/')) {
-    if (path === '/api/usage/v1') return usage(request, env);
     if (path === '/api/github/stars') return githubStars(request, env, ctx);
     return json(404, { error: 'not_found' });
   }

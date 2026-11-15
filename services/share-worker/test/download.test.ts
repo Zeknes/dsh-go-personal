@@ -172,7 +172,7 @@ describe('public page (DOWNLOAD_ACCESS=public)', () => {
     expect(html).toContain('Android 8.0');
     expect(html).toContain('安装未知应用');
     expect(html).toContain('社区作品，非 DeepSeek 官方应用');
-    // What is counted, and what isn't (src/stats.ts, src/usage.ts).
+    // What is counted, and what isn't (src/stats.ts).
     expect(html).toContain('隐私：我们只统计下载和更新检查的次数');
     expect(html).toContain('这些统计记录里没有 IP，也不收集账号、对话和文件');
     expect(html).toContain('可在 App 里关闭');

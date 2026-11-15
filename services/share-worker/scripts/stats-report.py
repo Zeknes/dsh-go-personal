@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The report scripts/stats.sh prints, from the rows it fetched.
 
-    python3 scripts/stats-report.py <dir with downloads.json, checks.json, usage.json> <days> [today]
+    python3 scripts/stats-report.py <dir with downloads.json, checks.json> <days> [today]
 
 Rows are Analytics Engine SQL API answers ({"data": [...]}, numbers maybe as
 strings). Days are UTC+8 dates; [today] defaults to today there.
@@ -14,11 +14,6 @@ import sys
 import unicodedata
 from collections import Counter, defaultdict
 
-FEATURES = [("turns", "对话轮次"), ("voice", "语音输入"), ("phone", "手机操控"), ("share", "分享"), ("gen", "生成"), ("plugins", "插件")]
-# v3 (1.0.17 on); 0 in older reports. stats.sh names the call count "calls".
-FEATURES_V3 = [("tavern", "酒馆"), ("room", "伙伴小屋"), ("calls", "通话")]
-TOKENS = [("tok_in", "输入"), ("tok_out", "输出")]
-MERGED = [f for f, _ in FEATURES + FEATURES_V3 + TOKENS] + ["v"]
 ROUTES = [("cn", "国内"), ("global", "海外"), ("github", "GitHub")]
 
 
@@ -57,10 +52,6 @@ def table(headers, rows):
             parts.append(c + gap if i == 0 or i == len(r) - 1 and not c.replace(",", "").isdigit() else gap + c)
         out.append("  ".join(parts).rstrip())
     return "\n".join(out)
-
-
-# Fewest installs a model or system must share to be named in the report.
-MIN_GROUP = 20
 
 
 def spread(counter, top=6, unknown="未上报"):
@@ -138,99 +129,6 @@ def main():
             continue
         rows.append([day, fmt(len(devices[day])), fmt(checks[day]), spread(Counter(app_of[day].values()), top=3)])
     print(table(["日期", "设备", "检查次数", "版本（按设备）"], rows) if rows else "（没有数据）")
-
-    # ── The app's own reports ──
-    reports = {}
-    for r in load(folder, "usage"):
-        day, device = r.get("day"), r.get("device")
-        if not day or not device:
-            continue
-        key = (day, device)
-        have = reports.get(key)
-        if have is None or num(r.get("build")) > num(have.get("build")):
-            merged = dict(r)
-            if have:
-                for f in MERGED:
-                    merged[f] = max(num(have.get(f)), num(r.get(f)))
-            reports[key] = merged
-        else:
-            for f in MERGED:
-                have[f] = max(num(have.get(f)), num(r.get(f)))
-    seen = defaultdict(set)
-    for day, device in reports:
-        seen[device].add(day)
-    print("\nApp 统计（0.9.9 起，用户可关闭；同一安装同一天只算一次）")
-    rows = []
-    for day in window:
-        today_reports = [v for (d, _), v in reports.items() if d == day]
-        if not today_reports:
-            continue
-        rows.append([day, fmt(len(today_reports)), *[fmt(sum(num(v.get(f)) for v in today_reports)) for f, _ in FEATURES]])
-    print(table(["日期", "日活", *[label for _, label in FEATURES]], rows) if rows else "（没有数据）")
-
-    # v3: who used the tavern, the room and calls, and the tokens model
-    # replies reported. Only v3 reports say; older ones are left out.
-    v3_days = []
-    for day in window:
-        v3 = [v for (d, _), v in reports.items() if d == day and num(v.get("v")) >= 3]
-        if v3:
-            v3_days.append((day, v3))
-    if v3_days:
-        print("\n酒馆、伙伴小屋、通话（1.0.17 起；台 = 当天用过的安装数，次 = 合计；只算 v3 报告）")
-        rows = []
-        for day, v3 in v3_days:
-            cells = []
-            for f, _ in FEATURES_V3:
-                cells += [fmt(sum(1 for v in v3 if num(v.get(f)) > 0)), fmt(sum(num(v.get(f)) for v in v3))]
-            rows.append([day, fmt(len(v3)), *cells])
-        heads = [h for _, label in FEATURES_V3 for h in (f"{label}·台", f"{label}·次")]
-        print(table(["日期", "v3 日活", *heads], rows))
-        print("\nToken（模型回复里报了用量的才算，不估算；人均 = 合计 ÷ 有 token 记录的安装）")
-        rows = []
-        for day, v3 in v3_days:
-            spent = [v for v in v3 if num(v.get("tok_in")) + num(v.get("tok_out")) > 0]
-            totals = [sum(num(v.get(f)) for v in spent) for f, _ in TOKENS]
-            per = [fmt(t / len(spent)) if spent else "—" for t in totals]
-            rows.append([day, fmt(len(spent)), *[fmt(t) for t in totals], *per])
-        print(table(["日期", "有记录的安装", *[f"{label}合计" for _, label in TOKENS], *[f"人均{label}" for _, label in TOKENS]], rows))
-
-    if reports:
-        print("\n7 日留存（D 天新出现的安装中，D+7 天仍上报的比例；此前 21 天没出现过算新安装，所以是粗略值）")
-        rows = []
-        for day in window:
-            if shift(day, 7) > today:
-                continue
-            earlier = {shift(day, -i) for i in range(1, 22)}
-            new = [d for d, active in seen.items() if day in active and not active & earlier]
-            if not new:
-                continue
-            back = sum(1 for d in new if shift(day, 7) in seen[d])
-            rows.append([day, fmt(len(new)), fmt(back), f"{round(100 * back / len(new))}%"])
-        print(table(["日期", "新安装", "第 7 天", "留存"], rows) if rows else "（还不满 7 天）")
-
-        latest = {}
-        for (day, device), v in reports.items():
-            if day in inside and (device not in latest or day > latest[device][0]):
-                latest[device] = (day, v)
-        print(f"\n分布（窗口内 {fmt(len(latest))} 个安装，各取最近一次上报）")
-        for field, label in [("app", "版本"), ("abi", "ABI"), ("maker", "厂商"), ("engine", "运行方式"), ("lang", "语言"), ("sdk", "系统 API")]:
-            values = Counter(str(int(num(v.get(field)))) if field == "sdk" else (v.get(field) or "") for _, v in latest.values())
-            print(f"{label}：{spread(values)}")
-        # Model and system come from 1.0.15 on. A value fewer than MIN_GROUP
-        # installs share would point at too few people: it goes under 其他.
-        for field, label in [("model", "机型"), ("rom", "系统版本")]:
-            values = Counter(v.get(field) for _, v in latest.values() if v.get(field))
-            if not values:
-                print(f"{label}：—（1.0.15 起才上报）")
-                continue
-            kept = Counter({k: n for k, n in values.items() if n >= MIN_GROUP})
-            kept["其他"] = 0
-            small = sum(n for k, n in values.items() if n < MIN_GROUP)
-            if small:
-                kept["其他"] = small
-            else:
-                del kept["其他"]
-            print(f"{label}（{fmt(sum(values.values()))} 个安装上报）：{spread(kept, top=10)}")
 
 
 if __name__ == "__main__":

@@ -8,7 +8,6 @@
 //   dshgo_checks     GET /beta/update.json answered to the app's channel
 //                    token: day, daily device code, app version and ABI (when
 //                    the User-Agent says), country
-//   dshgo_usage      POST /api/usage/v1, the app's own report (src/usage.ts)
 //
 // The daily device code is HMAC(today's salt, IP + User-Agent), 64 bits. The
 // salt is random: the StatsSalt Durable Object makes it on the day's first

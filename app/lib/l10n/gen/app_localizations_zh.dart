@@ -16364,9 +16364,6 @@ class L10nZh extends L10n {
   String get searchKwPluginsMarket => '插件市场,安装插件,市场,获取插件';
 
   @override
-  String get searchKwUsageStats => '统计,使用统计,匿名,隐私,数据,改进,遥测,分析';
-
-  @override
   String get searchKwQuickPanel => '左滑,快捷入口,手势,滑动,目录,自定义目录,快捷,常用入口';
 
   @override
@@ -23020,28 +23017,6 @@ class L10nZh extends L10n {
   String updateDownloadingPercent(int percent) {
     return '正在下载 $percent%';
   }
-
-  @override
-  String get usageStatsTitle => '发送匿名使用统计';
-
-  @override
-  String get usageStatsSection => '改进 DSH Go';
-
-  @override
-  String get usageStatsFooter =>
-      '这个开关只控制 dsh-go 自身的统计：各功能使用次数（含语音通话）、模型回复报告的 token 数、版本、手机品牌和型号、系统版本，不含对话、文件和账号；它不控制 Google ML Kit SDK 的统计。';
-
-  @override
-  String get usageNoticeBody => '不含对话和个人信息，可随时关闭';
-
-  @override
-  String get usageUpgradeNotice => '新增匿名使用统计，帮助改进 DSH Go。\n不含对话和个人信息';
-
-  @override
-  String get usageUpgradeLearn => '了解';
-
-  @override
-  String get usageUpgradeOff => '关闭';
 
   @override
   String viewArtifactSaved(String value) {

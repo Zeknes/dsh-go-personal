@@ -46,7 +46,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../phone/support.dart' show FixedActiveHost;
 import '../shell/golden_harness.dart';
 import '../support/test_fonts.dart';
-import '../usage/support.dart' show NoPhone;
+import 'package:dsh_app/phone/phone_channel.dart';
+
+class NoPhone extends PhoneChannel {
+  @override
+  Future<PhoneStatus> status() async => const PhoneStatus.notReady();
+}
 
 // ── Fakes ────────────────────────────────────────────────────────────────────
 

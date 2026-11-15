@@ -29966,12 +29966,6 @@ abstract class L10n {
   /// **'插件市场,安装插件,市场,获取插件'**
   String get searchKwPluginsMarket;
 
-  /// No description provided for @searchKwUsageStats.
-  ///
-  /// In zh, this message translates to:
-  /// **'统计,使用统计,匿名,隐私,数据,改进,遥测,分析'**
-  String get searchKwUsageStats;
-
   /// No description provided for @searchKwQuickPanel.
   ///
   /// In zh, this message translates to:
@@ -42073,48 +42067,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'正在下载 {percent}%'**
   String updateDownloadingPercent(int percent);
-
-  /// No description provided for @usageStatsTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'发送匿名使用统计'**
-  String get usageStatsTitle;
-
-  /// No description provided for @usageStatsSection.
-  ///
-  /// In zh, this message translates to:
-  /// **'改进 DSH Go'**
-  String get usageStatsSection;
-
-  /// No description provided for @usageStatsFooter.
-  ///
-  /// In zh, this message translates to:
-  /// **'这个开关只控制 dsh-go 自身的统计：各功能使用次数（含语音通话）、模型回复报告的 token 数、版本、手机品牌和型号、系统版本，不含对话、文件和账号；它不控制 Google ML Kit SDK 的统计。'**
-  String get usageStatsFooter;
-
-  /// No description provided for @usageNoticeBody.
-  ///
-  /// In zh, this message translates to:
-  /// **'不含对话和个人信息，可随时关闭'**
-  String get usageNoticeBody;
-
-  /// No description provided for @usageUpgradeNotice.
-  ///
-  /// In zh, this message translates to:
-  /// **'新增匿名使用统计，帮助改进 DSH Go。\n不含对话和个人信息'**
-  String get usageUpgradeNotice;
-
-  /// No description provided for @usageUpgradeLearn.
-  ///
-  /// In zh, this message translates to:
-  /// **'了解'**
-  String get usageUpgradeLearn;
-
-  /// No description provided for @usageUpgradeOff.
-  ///
-  /// In zh, this message translates to:
-  /// **'关闭'**
-  String get usageUpgradeOff;
 
   /// No description provided for @viewArtifactSaved.
   ///

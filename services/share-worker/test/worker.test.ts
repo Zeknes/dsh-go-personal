@@ -39,6 +39,7 @@ describe('pages', () => {
     const { env } = makeEnv();
     expect((await worker.fetch(get('/c/Ab3dE5gH9k'), env)).status).toBe(404);
     expect((await worker.fetch(get('/api/v1/c/Ab3dE5gH9k'), env)).status).toBe(404);
+    expect((await worker.fetch(new Request(`${ORIGIN}/api/usage/v1`, { method: 'POST', body: '{}' }), env)).status).toBe(404);
   });
 
   it('404s everything else', async () => {

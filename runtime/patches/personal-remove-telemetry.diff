@@ -1,0 +1,230 @@
+--- a/node_modules/@deepseek-ai/dsh-session-telemetry-otel/lib/index.js
++++ b/node_modules/@deepseek-ai/dsh-session-telemetry-otel/lib/index.js
+@@ -93,90 +93,10 @@
+ 	shutdownTimeoutMillis;
+ 	sharing;
+ 	constructor(ctx, config) {
+-		const mode = resolveMode(config.mode);
+ 		super(ctx);
+-		this.sharing = sharingStatusFor(mode);
+-		if (mode === SessionTelemetryMode.DISABLED) {
+-			this.provider = void 0;
+-			this.shutdownTimeoutMillis = DEFAULT_SHUTDOWN_TIMEOUT_MILLIS;
+-			ctx.on("session/event", (session, event) => {
+-				if (isFeedback(session, event)) ctx.logger.warn(DISABLED_FEEDBACK_WARNING);
+-			});
+-			return;
+-		}
+-		const url = config.exporter?.url;
+-		if (url === void 0 || url.length === 0) throw new Error("session-telemetry-otel: exporter.url is required (the full OTLP logs endpoint)");
+-		let parsed;
+-		try {
+-			parsed = new URL(url);
+-		} catch {
+-			throw new Error(`session-telemetry-otel: exporter.url is not a valid URL: ${JSON.stringify(url)}`);
+-		}
+-		if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error(`session-telemetry-otel: exporter.url must be http(s), got ${parsed.protocol}`);
+-		const batchSize = config.processor?.maxExportBatchSize;
+-		if (batchSize !== void 0 && (!Number.isInteger(batchSize) || batchSize < 1)) throw new Error(`session-telemetry-otel: processor.maxExportBatchSize must be a positive integer, got ${String(batchSize)}`);
+-		const shutdownTimeoutMillis = config.shutdownTimeoutMillis ?? 3e3;
+-		if (!Number.isFinite(shutdownTimeoutMillis) || shutdownTimeoutMillis <= 0 || shutdownTimeoutMillis > MAX_TIMER_DELAY_MILLIS) throw new Error(`session-telemetry-otel: shutdownTimeoutMillis must be a positive finite number no greater than ${MAX_TIMER_DELAY_MILLIS}, got ${String(shutdownTimeoutMillis)}`);
+-		this.shutdownTimeoutMillis = shutdownTimeoutMillis;
+-		const { version } = createRequire(import.meta.url)("../package.json");
+-		const reporter = ctx.otel.createSessionLogReporter({
+-			scope: {
+-				name: "@deepseek-ai/dsh-session-telemetry-otel",
+-				version
+-			},
+-			exporter: {
+-				...config.exporter,
+-				url
+-			},
+-			...config.processor === void 0 ? {} : { processor: config.processor },
+-			...config.maxRequestBytes === void 0 ? {} : { maxRequestBytes: config.maxRequestBytes },
+-			resourceAttributes: {
+-				"service.name": APP_IDENTITY.product,
+-				"service.version": APP_IDENTITY.version,
+-				"user.id": getOrCreateAnonymousUserId()
+-			},
+-			onFailure: (message, error) => {
+-				ctx.logger.warn(message, error);
+-			}
+-		});
+-		this.provider = reporter;
+-		const enqueue = (record) => {
+-			if (record.sourceEvent === void 0) {
+-				ctx.logger.warn("Session log record withheld: redaction removed sourceEvent");
+-				return;
+-			}
+-			reporter.reportSessionLog({
+-				sessionId: record.sourceEvent.sessionId,
+-				event: {
+-					...record.sourceEvent.envelope,
+-					data: record.body
+-				},
+-				severityNumber: SEVERITY[record.severity],
+-				attributes: record.attributes
+-			});
+-		};
+-		const coordinator = new SessionTelemetryCoordinator(ctx, {
+-			emit: enqueue,
+-			shutdown: () => this.shutdown()
+-		}, {
+-			capture: "on-demand",
+-			includeHistory: true
+-		});
+-		ctx.on("session/event", (session, event) => {
+-			if (!isFeedback(session, event)) return;
+-			if (session.eventAt(event.seq) !== event) {
+-				ctx.logger.warn(NON_CANONICAL_EVENT_WARNING);
+-				return;
+-			}
+-			coordinator.captureSession(session, event.seq);
+-		});
+-		ctx.on("feedback/committed", (inspection) => {
+-			const snapshot = structuredClone(inspection);
+-			const committed = snapshot.events.at(-1);
+-			if (committed === void 0) return;
+-			const session = Session.fromRestore(snapshot.meta.id, snapshot.events, snapshot.meta, snapshot.inheritedEventCount, "detached", ctx.sessions.messageProjections);
+-			if (isFeedback(session, committed)) coordinator.captureSession(session, committed.seq);
+-		});
++		this.sharing = "disabled";
++		this.provider = void 0;
++		this.shutdownTimeoutMillis = DEFAULT_SHUTDOWN_TIMEOUT_MILLIS;
+ 	}
+ 	/**
+ 	* Drop direct records. Only a new canonical feedback submission can authorize
+@@ -190,23 +110,7 @@
+ 	* queued records are abandoned and no further requests may start.
+ 	* @returns completion after transport shutdown, or rejection at the configured deadline.
+ 	*/
+-	async shutdown() {
+-		if (this.provider === void 0) return;
+-		const providerShutdown = this.provider.shutdown();
+-		let timer;
+-		const deadline = new Promise((_resolve, reject) => {
+-			timer = setTimeout(() => {
+-				this.provider?.stopPending();
+-				reject(/* @__PURE__ */ new Error(`session-telemetry-otel: provider shutdown exceeded ${this.shutdownTimeoutMillis}ms`));
+-			}, this.shutdownTimeoutMillis);
+-		});
+-		try {
+-			await Promise.race([providerShutdown, deadline]);
+-		} finally {
+-			/* v8 ignore else -- the Promise executor assigns timer synchronously before this race starts. */
+-			if (timer !== void 0) clearTimeout(timer);
+-		}
+-	}
++	async shutdown() {}
+ };
+ //#endregion
+ export { Config, DEFAULT_SHUTDOWN_TIMEOUT_MILLIS, DEFAULT_TELEMETRY_MODE, OpenTelemetrySessionBackend, OpenTelemetrySessionBackend as default, SessionTelemetryMode };
+--- a/node_modules/@deepseek-ai/dsh-host-product-telemetry-otel/lib/index.js
++++ b/node_modules/@deepseek-ai/dsh-host-product-telemetry-otel/lib/index.js
+@@ -25,55 +25,8 @@
+ 	static Config = Config;
+ 	reporter;
+ 	constructor(ctx, config) {
+-		let endpoint;
+-		try {
+-			endpoint = new URL(config.endpoint);
+-		} catch (cause) {
+-			throw new Error("product-telemetry-otel: endpoint must be a valid HTTP(S) URL", { cause });
+-		}
+-		try {
+-			validateHeaderValue("x-channel", config.channel);
+-		} catch (cause) {
+-			throw new Error("product-telemetry-otel: channel must be a valid HTTP header value", { cause });
+-		}
+-		if (!["http:", "https:"].includes(endpoint.protocol)) throw new Error("product-telemetry-otel: endpoint must use HTTP or HTTPS");
+-		if (config.maxExportBatchSize > config.maxQueueSize) throw new Error("product-telemetry-otel: maxExportBatchSize must not exceed maxQueueSize");
+ 		super(ctx, "productTelemetry");
+-		const reporter = ctx.otel.createEventReporter({
+-			exporter: {
+-				url: config.endpoint,
+-				headers: { "x-channel": config.channel },
+-				timeoutMillis: config.timeoutMillis,
+-				...config.compression === void 0 ? {} : { compression: config.compression === "gzip" ? CompressionAlgorithm.GZIP : CompressionAlgorithm.NONE }
+-			},
+-			resourceAttributes: {
+-				"service.name": config.serviceName,
+-				"service.version": config.serviceVersion
+-			},
+-			scope: { name: "@deepseek-ai/dsh-host-product-telemetry-otel" },
+-			processor: {
+-				maxExportBatchSize: config.maxExportBatchSize,
+-				maxQueueSize: config.maxQueueSize,
+-				scheduledDelayMillis: config.scheduledDelayMillis,
+-				exportTimeoutMillis: config.exportTimeoutMillis
+-			},
+-			onFailure: (message, error) => {
+-				ctx.logger.warn(message, error);
+-			}
+-		});
+-		this.reporter = reporter;
+-		ctx.effect(() => async () => {
+-			const cancellation = new AbortController();
+-			const timer = setTimeout(() => {
+-				ctx.logger.warn("Product telemetry shutdown deadline exceeded; pending events may be lost");
+-				cancellation.abort(/* @__PURE__ */ new Error("Product telemetry shutdown deadline exceeded"));
+-			}, config.shutdownTimeoutMillis);
+-			try {
+-				await reporter.shutdown(cancellation.signal);
+-			} finally {
+-				clearTimeout(timer);
+-			}
+-		});
++		this.reporter = void 0;
+ 	}
+ 	/**
+ 	* Enqueue one selected product event without waiting for network delivery.
+@@ -81,7 +34,7 @@
+ 	* @param record - caller-owned event containing only approved analytics fields.
+ 	*/
+ 	emit(record) {
+-		this.reporter.emit(record);
++		return;
+ 	}
+ };
+ //#endregion
+--- a/node_modules/@deepseek-ai/dsh-client-product-analytics/lib/index.js
++++ b/node_modules/@deepseek-ai/dsh-client-product-analytics/lib/index.js
+@@ -322,36 +322,14 @@
+ 		constructor(ctx, config) {
+ 			super(ctx, "productAnalytics");
+ 			this.config = config;
+-			ctx.effect(() => async () => {
+-				this.active = false;
+-				for (const listener of this.listeners) listener();
+-				this.environmentLifetime.abort();
+-				await this.environment;
+-			});
+-			ctx.on("loader/volatile-update", () => {
+-				for (const listener of this.listeners) listener();
+-			});
+-			ctx.inject(["settings"], (child) => {
+-				child.effect(() => child.settings.configure({ auto: false }, ctx.fiber));
+-			});
+-			ctx.on("session/event", (session, event) => {
+-				if (event.type !== "compaction/start") return;
+-				this.report({
+-					eventName: "context_compression",
+-					timestamp: Date.now(),
+-					attributes: {
+-						session_id: session.id,
+-						trigger_type: event.data.turn === null ? "manual" : "auto"
+-					}
+-				});
+-			});
++
+ 		}
+ 		/**
+ 		* Read the collection policy.
+ 		* @returns whether this Host currently accepts Desktop analytics.
+ 		*/
+ 		enabled() {
+-			return this.active && this.config.enabled.get();
++			return false;
+ 		}
+ 		/**
+ 		* Stream the effective policy initially and after live configuration edits.
