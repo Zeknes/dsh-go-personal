@@ -127,7 +127,7 @@ void main() {
   testWidgets('the separate project star still opens the repository', (tester) async {
     await pump(tester);
     await tap(tester, 'settings-star');
-    expect(opened.map((uri) => uri.toString()), ['https://github.com/Zeknes/dsh-go-personal']);
+    expect(opened.map((uri) => uri.toString()), ['https://github.com/Zeknes/dsh-pure']);
   });
 
   testWidgets('no browser copies the original B23 URL and reports it', (tester) async {

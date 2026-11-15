@@ -2,6 +2,10 @@
   <a href="README.md">简体中文</a> · <b>English</b>
 </p>
 
+# DSH Pure
+
+This repository is an independent personal fork of [DSH Go](https://github.com/ccch1mneyyy/dsh-go), retaining upstream attribution and licenses. DSH Pure uses the separate Android package ID `io.github.zeknes.dsh_pure` and does not automatically migrate DSH Go or DSH Personal data. Get Pure packages and updates only from [DSH Pure Releases](https://github.com/Zeknes/dsh-pure/releases); the upstream description and download links below are for reference, not Pure downloads.
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-en-dark.webp">

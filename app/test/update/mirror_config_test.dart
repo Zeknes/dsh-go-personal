@@ -12,10 +12,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'support.dart';
 
-const _api = 'https://api.github.com/repos/Zeknes/dsh-go-personal/releases/latest';
+const _api = 'https://api.github.com/repos/Zeknes/dsh-pure/releases/latest';
 const _apk = 'dsh-go-0.9.0-arm64.apk';
-const _githubApk = 'https://github.com/Zeknes/dsh-go-personal/releases/download/v0.9.0/$_apk';
-const _manifest = 'https://github.com/Zeknes/dsh-go-personal/releases/latest/download/update.json';
+const _githubApk = 'https://github.com/Zeknes/dsh-pure/releases/download/v0.9.0/$_apk';
+const _manifest = 'https://github.com/Zeknes/dsh-pure/releases/latest/download/update.json';
 const _dlFeed = 'https://dl.dshtui.com/update.json';
 const _dlApk = 'https://dl.dshtui.com/download/0.9.0/$_apk';
 const _mirror = 'https://dl.example.com';
@@ -50,9 +50,32 @@ void main() {
       final shipped = defaultUpdateSources();
       expect(shipped.channel, isNull);
       expect(shipped.feed, isNull);
-      expect(shipped.mirrors.map((m) => m.id), ['github', 'ghfast', 'gh-proxy']);
-      expect(shipped.metadataEndpoints().every((e) => !e.url.host.endsWith('dshtui.com')), isTrue);
+      expect(shipped.mirrors.map((m) => m.id), ['github']);
+      expect(shipped.metadataEndpoints().map((e) => e.url.toString()), [_api]);
       expect(githubLatestApi.toString(), _api);
+    });
+
+    test('Pure API failure never falls back to upstream', () async {
+      final http = FakeHttp();
+      final result = await UpdateChecker(http: http, sources: defaultUpdateSources()).check();
+      expect(result, isA<CheckFailed>());
+      expect(http.urls, [_api]);
+    });
+
+    test('Pure API accepts only matching version, architecture and repository assets', () async {
+      final json = jsonDecode(fixture('github_release.json')) as Map<String, dynamic>;
+      json['assets'] = [
+        {'name': 'dsh-pure-1.2.0-arm64.apk', 'browser_download_url': 'https://github.com/Zeknes/dsh-pure/releases/download/v1.2.0/dsh-pure-1.2.0-arm64.apk'},
+        {'name': 'dsh-go-1.2.0-x64.apk', 'browser_download_url': 'https://github.com/ccch1mneyyy/dsh-go/releases/download/v1.2.0/dsh-go-1.2.0-x64.apk'},
+      ];
+      final http = FakeHttp({_api: (_, _) => textResponse(jsonEncode(json))});
+      expect(await UpdateChecker(http: http, sources: defaultUpdateSources()).check(), isA<CheckFailed>());
+      json['assets'] = [json['assets'][0]];
+      final found = await UpdateChecker(http: http, sources: defaultUpdateSources()).check() as CheckFound;
+      expect(found.release.apkFor(ApkFlavor.arm64), isNotNull);
+      expect(found.release.apkFor(ApkFlavor.x64), isNull);
+      json['assets'][0]['name'] = 'dsh-pure-9.0.0-arm64.apk';
+      expect(await UpdateChecker(http: http, sources: defaultUpdateSources()).check(), isA<CheckFailed>());
     });
 
     test('the API is not moved ahead by having answered last time; the others are', () {

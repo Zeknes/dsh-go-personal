@@ -1,27 +1,9 @@
-/// Where in-app updates come from. Everything network-facing about updates is
-/// configured here; the conventions and trade-offs are in `docs/release.md`.
-///
-/// Every build asks our own copy of the release files first
-/// ([updateDownloadOrigin]: `/update.json`, `/download/<version>/<file>`), then
-/// GitHub and the public accelerators, and the rate-limited GitHub API last.
-/// Beta builds carry a channel token (`--dart-define=DSH_BETA_CHANNEL_TOKEN`,
-/// put in by `tooling/build-apk.sh`): they ask the beta channel before all of
-/// that ([UpdateChannel], `go.dshtui.com/beta/update.json`,
-/// docs/design/share-links.md) and download from it with the token.
-///
-/// Build-time overrides (no code change needed):
-/// - `--dart-define=DSH_BETA_CHANNEL_ORIGIN=https://example.com` moves the beta
-///   channel;
-/// - `--dart-define=DSH_UPDATE_MIRROR=https://example.com` moves the copy of
-///   the release files (empty string = none);
-/// - `--dart-define=DSH_UPDATE_FEED=https://example.com/dsh/update.json`
-///   asks another manifest in place of the copy's (empty string = none);
-/// - `--dart-define=DSH_UPDATE_MIRRORS=https://a.example/,https://b.example/`
-///   replaces the public GitHub accelerator list (empty string = none).
+/// DSH Pure checks its own GitHub Releases API only. Upstream feeds, beta
+/// channels and build-time mirror overrides are not used by the shipped app.
 library;
 
 /// GitHub repository the releases live in.
-const updateRepo = 'Zeknes/dsh-go-personal';
+const updateRepo = 'Zeknes/dsh-pure';
 
 /// `releases/latest` of the REST API: tag, notes, assets with sizes and
 /// SHA-256 digests. Unauthenticated: 60 requests per hour per IP.
@@ -144,21 +126,8 @@ const publicMirrors = [
   UpdateMirror(id: 'gh-proxy', label: 'gh-proxy.com', prefix: 'https://gh-proxy.com/'),
 ];
 
-const _unset = '\u0000';
-const _mirrorDefine = String.fromEnvironment('DSH_UPDATE_MIRROR', defaultValue: '');
-const _feedDefine = String.fromEnvironment('DSH_UPDATE_FEED', defaultValue: _unset);
-const _mirrorsDefine = String.fromEnvironment('DSH_UPDATE_MIRRORS', defaultValue: _unset);
-const _betaTokenDefine = String.fromEnvironment('DSH_BETA_CHANNEL_TOKEN');
-const _betaOriginDefine = String.fromEnvironment('DSH_BETA_CHANNEL_ORIGIN', defaultValue: '');
-
-/// The configuration the app ships with (see the library comment for overrides).
-UpdateSources defaultUpdateSources() => buildUpdateSources(
-  mirror: _mirrorDefine,
-  feed: _feedDefine == _unset ? null : _feedDefine,
-  accelerators: _mirrorsDefine == _unset ? null : _mirrorsDefine,
-  channelToken: _betaTokenDefine,
-  channelOrigin: _betaOriginDefine,
-);
+/// Pure builds use only their own GitHub release API.
+UpdateSources defaultUpdateSources() => const UpdateSources(mirrors: [UpdateMirror.github], onlyGithubApi: true);
 
 /// [defaultUpdateSources] from the defines' values: [mirror] is the origin of
 /// a copy of the release files ('' = none); [feed] another manifest to ask
@@ -234,14 +203,18 @@ class UpdateEndpoint {
 /// API stays last even then: anonymous calls get 60 an hour per IP, shared
 /// IPs often find them spent, and its answer carries no delta patches.
 class UpdateSources {
-  const UpdateSources({this.channel, this.feed, this.useGithubApi = true, this.mirrors = const [UpdateMirror.github]});
+  const UpdateSources({this.channel, this.feed, this.useGithubApi = true, this.mirrors = const [UpdateMirror.github], this.onlyGithubApi = false});
 
+  final bool onlyGithubApi;
   final UpdateChannel? channel;
   final Uri? feed;
   final bool useGithubApi;
   final List<UpdateMirror> mirrors;
 
   List<UpdateEndpoint> metadataEndpoints({String? preferred}) {
+    if (onlyGithubApi) {
+      return [UpdateEndpoint(id: 'api', kind: EndpointKind.githubApi, url: githubLatestApi, mirrorId: UpdateMirror.github.id)];
+    }
     final manifests = [
       if (feed case final feed?) UpdateEndpoint(id: 'feed', kind: EndpointKind.manifest, url: feed, mirrorId: null),
       for (final mirror in mirrors)

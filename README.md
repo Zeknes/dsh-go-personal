@@ -2,6 +2,10 @@
   <b>简体中文</b> · <a href="README.en.md">English</a>
 </p>
 
+# DSH Pure
+
+本仓库是 [DSH Go](https://github.com/ccch1mneyyy/dsh-go) 的独立个人分支，保留上游作者和许可。DSH Pure 使用独立的 Android 包名 `io.github.zeknes.dsh_pure`，不自动迁移 DSH Go 或 DSH Personal 的数据。Pure 的安装包和更新只从 [DSH Pure Releases](https://github.com/Zeknes/dsh-pure/releases) 获取；下方原有上游介绍与下载链接仅供参考，不是 Pure 的下载地址。
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-zh-dark.webp">

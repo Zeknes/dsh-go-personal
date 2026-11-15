@@ -133,10 +133,12 @@ class UpdateChecker {
     }
     try {
       final json = jsonDecode(body);
-      return switch (endpoint.kind) {
+      final release = switch (endpoint.kind) {
         EndpointKind.githubApi => parseGithubRelease(json),
         EndpointKind.manifest => parseUpdateManifest(json, base: endpoint.url),
       };
+      if (sources.onlyGithubApi && !isPureRelease(release)) return CheckFailure.badResponse;
+      return release;
     } on Object {
       // FormatException, or a TypeError from a field of the wrong type. Some
       // mirrors answer 200 with an HTML error page.

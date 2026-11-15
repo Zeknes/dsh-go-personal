@@ -28,7 +28,7 @@ FAKE_GH = """#!{python}
 import json, os, shutil, sys
 args = sys.argv[1:]
 open(os.environ["FAKE_LOG"], "a").write(" ".join(args) + "\\n")
-assert args[:1] == ["release"] and args[args.index("--repo") + 1] == "ccch1mneyyy/dsh-go", args
+assert args[:1] == ["release"] and args[args.index("--repo") + 1] == "Zeknes/dsh-pure", args
 if args[1] == "list":
     print(os.environ["FAKE_RELEASES"])
 elif args[1] == "download":
@@ -257,7 +257,7 @@ class PublishedTest(unittest.TestCase):
     def release(self, tag, sums_for=None):
         folder = self.assets / tag
         folder.mkdir(parents=True)
-        name = f"dsh-go-{tag[1:]}-arm64.apk"
+        name = f"dsh-pure-{tag[1:]}-arm64.apk"
         path = apk(folder / name, 7)
         (folder / "SHA256SUMS").write_text(f"{sums_for or sha(path)}  {name}\n")
         return path
@@ -272,14 +272,14 @@ class PublishedTest(unittest.TestCase):
         original = self.release("v1.0.7")
         cache = self.dir / "cache"
         got = published_apk("v1.0.7", cache)
-        self.assertEqual(got, cache / "v1.0.7" / "dsh-go-1.0.7-arm64.apk")
+        self.assertEqual(got, cache / "v1.0.7" / "dsh-pure-1.0.7-arm64.apk")
         self.assertEqual(got.read_bytes(), original.read_bytes())
         self.assertEqual(published_apk("v1.0.7", cache), got)
-        self.assertEqual(self.log.read_text().count("--pattern dsh-go-1.0.7-arm64.apk"), 1)
+        self.assertEqual(self.log.read_text().count("--pattern dsh-pure-1.0.7-arm64.apk"), 1)
         # A damaged copy in the cache is fetched again.
         got.write_bytes(b"truncated")
         self.assertEqual(published_apk("v1.0.7", cache).read_bytes(), original.read_bytes())
-        self.assertEqual(self.log.read_text().count("--pattern dsh-go-1.0.7-arm64.apk"), 2)
+        self.assertEqual(self.log.read_text().count("--pattern dsh-pure-1.0.7-arm64.apk"), 2)
 
     def test_downloads_pure_named_release(self):
         folder = self.assets / 'v1.0.9'

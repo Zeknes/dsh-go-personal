@@ -26,7 +26,7 @@ enum ApkFlavor {
 /// No build number: GitHub rewrites `+` in asset names.
 String apkAssetName(AppVersion version, ApkFlavor flavor) => 'dsh-go-${version.name}-${flavor.name}.apk';
 
-final _apkAssetPattern = RegExp(r'^dsh-go-(.+)-(arm64|x64)\.apk$');
+final _apkAssetPattern = RegExp(r'^(?:dsh-go|dsh-pure)-(.+)-(arm64|x64)\.apk$');
 
 /// What a manifest may name a file: it becomes a path in the download
 /// directory, so nothing that climbs out of it.
@@ -178,6 +178,19 @@ class ReleaseInfo {
           flavor.name: [for (final p in list) p.toJson()],
       },
   };
+}
+
+bool isPureRelease(ReleaseInfo release) {
+  if (release.apks.isEmpty) return false;
+  for (final entry in release.apks.entries) {
+    final asset = entry.value;
+    if (asset.name != 'dsh-pure-${release.version.name}-${entry.key.name}.apk' ||
+        asset.url.scheme != 'https' || asset.url.host != 'github.com' ||
+        asset.url.path != '/$updateRepo/releases/download/${release.tag}/${asset.name}') {
+      return false;
+    }
+  }
+  return true;
 }
 
 /// Normalizes a SHA-256 as GitHub (`sha256:…`) or `sha256sum` writes it.

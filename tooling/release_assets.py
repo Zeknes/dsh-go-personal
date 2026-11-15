@@ -40,7 +40,7 @@ from build_number import MAX_VERSION_CODE, decode
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 FLAVORS = ("arm64", "x64")
 FLAVOR_ABI = {"arm64": "arm64-v8a", "x64": "x86_64"}
-REPO = "ccch1mneyyy/dsh-go"
+REPO = "Zeknes/dsh-pure"
 VERSION_RE = re.compile(r"^(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?:\+(\d+))?$")
 BADGING_RE = re.compile(r"^package: .*?\bversionCode='(\d*)' versionName='([^']*)'", re.MULTILINE)
 CACHE = pathlib.Path.home() / ".cache" / "dshgo-release" / "apk"
@@ -158,7 +158,7 @@ def published_apk(tag: str, cache: pathlib.Path) -> pathlib.Path:
     release's SHA256SUMS says it is."""
     version = tag.removeprefix('v')
     sums = cache / tag / "SHA256SUMS"
-    names = [f"dsh-pure-{version}-arm64.apk", f"dsh-go-{version}-arm64.apk"]
+    names = [f"dsh-pure-{version}-arm64.apk"]
     for name in names:
         apk = cache / tag / name
         if apk.is_file() and listed(sums, name) == sha256(apk):

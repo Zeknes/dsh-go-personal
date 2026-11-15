@@ -66,7 +66,7 @@ void main() {
       final arm = release.apkFor(ApkFlavor.arm64)!;
       expect(
         arm.url.toString(),
-        'https://github.com/Zeknes/dsh-go-personal/releases/download/v1.2.0/dsh-go-1.2.0-arm64.apk',
+        'https://github.com/Zeknes/dsh-pure/releases/download/v1.2.0/dsh-go-1.2.0-arm64.apk',
       );
       expect(arm.sha256, hasLength(64));
       expect(arm.size, 14);

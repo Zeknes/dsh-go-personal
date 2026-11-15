@@ -352,7 +352,7 @@ class AppUpdateController extends Notifier<AppUpdateState> {
       final raw = prefs.getString(_latestKey);
       if (raw != null) cached = parseUpdateManifest(jsonDecode(raw));
     } catch (_) {}
-    final latest = cached != null && cached.version.isNewerThan(current) ? cached : null;
+    final latest = cached != null && (!ref.read(updateSourcesProvider).onlyGithubApi || isPureRelease(cached)) && cached.version.isNewerThan(current) ? cached : null;
     if (latest == null) {
       // Updated (or nothing pending): drop the offer and any leftover APK.
       unawaited(prefs.remove(_latestKey));
