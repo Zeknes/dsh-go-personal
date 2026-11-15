@@ -191,7 +191,7 @@ test('an old or absent engine has an explicit non-collecting unavailable capabil
   } finally { signals.dispose(); }
 });
 
-test('actual bridge registration keeps both new routes behind its existing connection rejection guard', async (t) => {
+test('removed bridge routes still enforce the connection guard and return not found', async (t) => {
   const routes = [], disposals = [], guarded = [];
   let connected = true;
   const ctx = { logger: { warn() {} },
@@ -217,8 +217,7 @@ test('actual bridge registration keeps both new routes behind its existing conne
     connected = true;
     const allowed = fakeExchange(); Object.assign(allowed.req, { url: path, headers: { authorization: AUTH } });
     await route.handler(allowed.req, allowed.res);
-    assert.equal(allowed.res.status, path === ROOT ? 200 : 503);
-    if (path === ROOT) assert.equal(JSON.parse(allowed.res.text).available, false);
+    assert.equal(allowed.res.status, 404);
   }
   assert.deepEqual(guarded, [ROOT, ROOT, `${ROOT}/stream`, `${ROOT}/stream`]);
 });
