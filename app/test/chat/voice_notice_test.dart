@@ -3,6 +3,30 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:dsh_app/ui/chat/voice/voice_notice.dart';
 
 void main() {
+  for (final brightness in Brightness.values) {
+    for (final text in ['没有听清，再说一次', 'Didn’t catch that. Try again.']) {
+      testWidgets('notice has ordinary undecorated text: $brightness $text', (tester) async {
+        final notice = VoiceNotice();
+        late BuildContext context;
+        await tester.pumpWidget(MaterialApp(
+          theme: ThemeData(brightness: brightness),
+          home: Scaffold(body: Builder(builder: (c) {
+            context = c;
+            return const SizedBox.expand();
+          })),
+        ));
+        notice.show(context, text);
+        await tester.pump();
+        final widget = tester.widget<Text>(find.text(text));
+        expect(widget.style!.inherit, isFalse);
+        expect(widget.style!.decoration, TextDecoration.none);
+        expect(widget.style!.color, Colors.white);
+        final rich = tester.widget<RichText>(find.descendant(of: find.text(text), matching: find.byType(RichText)));
+        expect(rich.text.style!.decoration, TextDecoration.none);
+        notice.dispose();
+      });
+    }
+  }
   testWidgets('voice notice passes taps through and expires', (tester) async {
     final notice = VoiceNotice();
     var taps = 0;

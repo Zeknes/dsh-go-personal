@@ -22,7 +22,10 @@ class VoiceNotice {
                   margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(color: const Color(0xB3202432), borderRadius: BorderRadius.circular(8)),
-                  child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                  child: Text(
+                    text,
+                    style: const TextStyle(inherit: false, color: Colors.white, fontSize: 14, decoration: TextDecoration.none),
+                  ),
                 ),
               ),
             ),
