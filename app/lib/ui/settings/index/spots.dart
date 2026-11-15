@@ -90,7 +90,6 @@ enum SettingsPageId {
   pluginInventory,
   allFeatures,
   diagnostics,
-  about,
   account,
 }
 
@@ -540,13 +539,6 @@ final _pages = <SettingsPageMeta>[
     keywords: (l) => l.searchKwDiagnostics,
     links: const ['diagnostics'],
   ),
-  SettingsPageMeta(
-    SettingsPageId.about,
-    title: (l) => l.hubAbout,
-    group: _help,
-    keywords: (l) => l.searchKwAbout,
-    links: const ['about'],
-  ),
   // The overview card.
   SettingsPageMeta(
     SettingsPageId.account,
@@ -585,16 +577,6 @@ abstract final class Spots {
     title: (l) => l.localeTitle,
     keywords: (l) => l.searchKwLanguage,
   );
-  static final askAi = SettingSpot(
-    'ask-ai',
-    page: SettingsPageId.hub,
-    group: _help,
-    title: (l) => l.askAiHelpTitle,
-    keywords: (l) => l.searchKwHelp,
-    condition: SpotCondition.nativeUi,
-  );
-
-  // 模型.
   static final addProvider = SettingSpot(
     'add-provider',
     page: SettingsPageId.models,
@@ -751,12 +733,6 @@ abstract final class Spots {
     title: (l) => l.hubHardwareEnterSends,
     keywords: (l) => l.hubHardwareEnterSendsHint,
   );
-  static final chatSuggestions = SettingSpot(
-    'chat-suggestions',
-    page: SettingsPageId.interface,
-    title: (l) => l.hubChatSuggestions,
-    keywords: (l) => l.searchKwChatSuggestions,
-  );
   static final quickPanel = SettingSpot(
     'quick-panel',
     page: SettingsPageId.interface,
@@ -770,12 +746,6 @@ abstract final class Spots {
     keywords: (l) => l.searchKwTableTint,
   );
   // 性能.
-  static final refreshRate = SettingSpot(
-    'refresh-rate',
-    page: SettingsPageId.performance,
-    title: (l) => l.performanceRefresh,
-    keywords: (l) => l.searchKwRefreshRate,
-  );
   static final blur = SettingSpot(
     'blur',
     page: SettingsPageId.performance,
@@ -934,34 +904,9 @@ abstract final class Spots {
     condition: SpotCondition.engineField,
   );
 
-  // 关于 dsh-go.
-  static final version = SettingSpot(
-    'version',
-    page: SettingsPageId.about,
-    title: (l) => l.commonVersion,
-    keywords: (l) => l.searchKwVersion,
-  );
-  static final updateCheck = SettingSpot(
-    'update-check',
-    page: SettingsPageId.about,
-    title: (l) => l.updateCheck,
-    keywords: (l) => l.searchKwUpdate,
-  );
-  static final updateAuto = SettingSpot(
-    'update-auto',
-    page: SettingsPageId.about,
-    title: (l) => l.updateAutoCheck,
-    keywords: (l) => l.searchKwUpdateAuto,
-  );
-  static final star = SettingSpot(
-    'star',
-    page: SettingsPageId.about,
-    title: (l) => l.starSettingsTitle,
-    keywords: (l) => l.searchKwStar,
-  );
   static final licenses = SettingSpot(
     'licenses',
-    page: SettingsPageId.about,
+    page: SettingsPageId.hub,
     title: (l) => l.hubSettingsLicenses,
     keywords: (l) => l.searchKwLicenses,
   );
@@ -971,7 +916,6 @@ final _rows = <SettingSpot>[
   Spots.chatTextSize,
   Spots.foldTurns,
   Spots.language,
-  Spots.askAi,
   Spots.addProvider,
   Spots.permissionCurrent,
   Spots.permissionDefault,
@@ -993,10 +937,8 @@ final _rows = <SettingSpot>[
   Spots.launchScreen,
   Spots.wallpaper,
   Spots.hardwareEnterSends,
-  Spots.chatSuggestions,
   Spots.quickPanel,
   Spots.tableTint,
-  Spots.refreshRate,
   Spots.blur,
   Spots.animations,
   Spots.fluidMotion,
@@ -1020,9 +962,5 @@ final _rows = <SettingSpot>[
   Spots.subagentDepth,
   Spots.parallelCalls,
   Spots.commandTimeout,
-  Spots.version,
-  Spots.updateCheck,
-  Spots.updateAuto,
-  Spots.star,
   Spots.licenses,
 ];

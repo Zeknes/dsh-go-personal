@@ -209,7 +209,7 @@ class AgentPresetsPage extends ConsumerWidget {
     final l10n = context.l10n;
     final connected = ref.watch(activeConnectionProvider).value != null;
     final presets = ref.watch(agentPresetsProvider);
-    final list = presets.value;
+    final list = presets.value == null ? null : visibleAgentPresets(presets.value!);
     return AppPage.list(
       title: l10n.featuresAgentPresets,
       subtitle: Text(l10n.featuresAgentPresetsSubtitle),

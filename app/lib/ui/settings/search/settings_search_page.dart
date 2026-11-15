@@ -19,7 +19,6 @@ import '../../../state/plugin_config/plugin_config_state.dart';
 import '../../../state/plugins_state.dart';
 import '../../../state/sessions_state.dart';
 import '../../common/app_sheet.dart' show groupTitleStyle;
-import '../../common/ask_ai.dart';
 import '../../common/capsule_chip.dart';
 import '../../common/list_page_row.dart';
 import '../../common/search_capsule.dart';
@@ -311,11 +310,6 @@ class _NoResults extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         FeatureMessage(icon: AppIcons.noResults, title: l10n.searchNoResults),
-        if (ref.watch(askAiAvailableProvider))
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: AskAiLink(label: l10n.searchAskAi(query), onPressed: () => unawaited(askAiQuestion(context, query))),
-          ),
       ],
     );
   }

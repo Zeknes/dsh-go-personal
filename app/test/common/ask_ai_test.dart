@@ -210,17 +210,17 @@ void main() {
       return settings;
     }
 
-    testWidgets('关于 › 使用帮助 asks the overview question', (tester) async {
+    testWidgets('settings keeps licenses but no help or about page', (tester) async {
       await pumpSettings(tester);
-      await tester.scrollUntilVisible(find.text('使用帮助'), 300, scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(find.text('诊断'), 300, scrollable: find.byType(Scrollable).first);
       await tester.pumpAndSettle();
-      final row = find.widgetWithText(SettingsTile, '使用帮助');
-      expect(find.descendant(of: row, matching: find.text('问 AI')), findsOneWidget);
-      await tester.ensureVisible(row);
+      expect(find.widgetWithText(SettingsTile, '使用帮助'), findsNothing);
+      expect(find.text('关于 DSH Pure'), findsNothing);
+      await tester.scrollUntilVisible(find.text('开源许可'), 300, scrollable: find.byType(Scrollable).first);
+      await tester.tap(find.text('开源许可'));
       await tester.pumpAndSettle();
-      await tester.tap(row);
-      await tester.pumpAndSettle();
-      expect(_container(tester).read(composeInboxProvider).single.text, '/dsh-go-guide DSH Go 能做什么？我该从哪里开始？');
+      expect(find.byType(LicensePage), findsOneWidget);
+      expect(find.text('DSH Go: ccch1mneyyy · AGPL-3.0'), findsOneWidget);
     });
 
     testWidgets('使用帮助 is not there in 网页模式', (tester) async {

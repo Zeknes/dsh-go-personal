@@ -14,15 +14,6 @@
       { "label": "压缩", "action": { "type": "command", "name": "compact" } }
     ]
   },
-  "emptyState": {
-    "suggestions": [
-      {
-        "title": "看看今天的待办",
-        "subtitle": "读工作区里的 TODO.md",
-        "action": { "type": "send", "text": "读一下 TODO.md，告诉我今天先做什么" }
-      }
-    ]
-  },
   "drawer": { "groups": ["pinned", "folders", "today", "yesterday", "thisWeek", "earlier"], "sort": "activity", "filter": "all" },
   "density": "compact",
   "hide": ["turnFooter", "tokenCount", "reasoningDetails"],

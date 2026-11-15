@@ -647,31 +647,6 @@ function validate(root, duplicates) {
     if (count > 0) entry('composer.quickActions', p);
   }
 
-  function suggestions(v, p) {
-    const list = array(v, p);
-    if (!list) return;
-    let count = 0;
-    list.forEach((item, index) => {
-      const ip = `${p}/${index}`;
-      const map = object(item, ip);
-      if (!map) return;
-      unknownKeys(map, ip, ['title', 'subtitle', 'action']);
-      const title = requiredLabel(map, ip, 'title', L.suggestionTitleMax);
-      let ok = true;
-      if (map.has('subtitle')) {
-        if (label(map.get('subtitle'), child(ip, 'subtitle'), L.suggestionSubtitleMax) === null) ok = false;
-      }
-      const a = requiredAction(map, ip);
-      if (title === null || a === null || !ok) return;
-      if (count >= L.suggestionsMax) {
-        issue(ip, M.tooMany(L.suggestionsMax), 'ignored');
-        return;
-      }
-      count++;
-    });
-    if (count > 0) entry('emptyState.suggestions', p);
-  }
-
   function groups(v, p) {
     const list = array(v, p);
     if (!list) return;
@@ -847,14 +822,6 @@ function validate(root, duplicates) {
         if (map) {
           unknownKeys(map, p, ['quickActions']);
           if (map.has('quickActions')) quickActions(map.get('quickActions'), child(p, 'quickActions'));
-        }
-        break;
-      }
-      case 'emptyState': {
-        const map = object(v, p);
-        if (map) {
-          unknownKeys(map, p, ['suggestions']);
-          if (map.has('suggestions')) suggestions(map.get('suggestions'), child(p, 'suggestions'));
         }
         break;
       }

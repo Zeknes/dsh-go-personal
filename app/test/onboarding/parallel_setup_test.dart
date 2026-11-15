@@ -503,15 +503,15 @@ void main() {
       return rig;
     }
 
-    testWidgets('confirms 轻量模式, on by default; off means 完整', (tester) async {
+    testWidgets('full is the default and the user can choose light', (tester) async {
       final rig = await pumpLow(tester, DeviceTier.low);
       final tile = find.byKey(const ValueKey('setup-light-mode'));
       expect(tile, findsOneWidget);
-      expect(tester.widget<Switch>(find.descendant(of: tile, matching: find.byType(Switch))).value, isTrue);
+      expect(tester.widget<Switch>(find.descendant(of: tile, matching: find.byType(Switch))).value, isFalse);
       await tester.tap(tile);
       await frames(tester, 3);
-      expect(rig.container.read(performancePrefsProvider).mode, PerformanceMode.full);
-      expect(tester.widget<Switch>(find.descendant(of: tile, matching: find.byType(Switch))).value, isFalse);
+      expect(rig.container.read(performancePrefsProvider).mode, PerformanceMode.light);
+      expect(tester.widget<Switch>(find.descendant(of: tile, matching: find.byType(Switch))).value, isTrue);
     });
 
     testWidgets('other phones have nothing to confirm', (tester) async {

@@ -59,7 +59,6 @@ Map<String, String> get _seatNames => {
       count() == 0 ? appL10n.shellAllHidden : appL10n.shellSettingCount(count()),
     ),
     'composer.quickActions' => (appL10n.shellQuickActions, appL10n.shellSettingCount(count())),
-    'emptyState.suggestions' => (appL10n.shellSuggestionCards, appL10n.shellSuggestionCardCount(count())),
     'drawer.groups' => (
       appL10n.shellDrawerGroups,
       count() == 0

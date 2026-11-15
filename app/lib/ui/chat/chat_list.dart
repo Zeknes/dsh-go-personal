@@ -23,7 +23,6 @@ import '../../state/attachments.dart' show DraftAttachment;
 import '../../state/chat_reveal.dart';
 import '../../state/chat_state.dart';
 import '../../state/connection_state.dart';
-import '../../state/hosts_state.dart' show HostKind, activeHostProvider;
 import '../../state/regenerate.dart';
 import '../../state/sessions_state.dart';
 import '../../state/settings_state.dart';
@@ -32,7 +31,6 @@ import '../common/bleed.dart';
 import '../common/ui_trace.dart';
 import '../theme/app_icons.dart';
 import '../theme/theme.dart';
-import '../update/update_sheet.dart' show checkForUpdates;
 import 'chat_rows.dart';
 import 'chat_rows_cache.dart';
 import 'media/media_paths.dart';
@@ -1351,9 +1349,6 @@ class _ChatListState extends ConsumerState<ChatList> with SingleTickerProviderSt
       return null;
     }
     if (refused) {
-      if (code == 'CLIENT_UPGRADE_REQUIRED' && ref.read(activeHostProvider).kind == HostKind.local) {
-        return (label: appL10n.updateCheck, onPressed: () => checkForUpdates(context, ref));
-      }
       return widget.onSwitchModel == null ? null : (label: appL10n.chatSwitchModel, onPressed: _switchModel);
     }
     if (s.pending.isNotEmpty) return null;

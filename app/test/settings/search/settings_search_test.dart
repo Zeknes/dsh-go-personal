@@ -7,7 +7,6 @@
 import 'package:dsh_app/l10n/l10n.dart';
 import 'package:dsh_app/runtime/runtime_state.dart';
 import 'package:dsh_app/state/ask_ai.dart';
-import 'package:dsh_app/state/compose_inbox.dart';
 import 'package:dsh_app/state/hosts_state.dart';
 import 'package:dsh_app/state/settings_state.dart';
 import 'package:dsh_app/ui/features/feature_catalog.dart';
@@ -201,13 +200,11 @@ void main() {
       expect(find.text('连接本机时可用'), findsOneWidget);
     });
 
-    testWidgets('nothing found: 问 AI with the question as typed, into a new chat', (tester) async {
+    testWidgets('nothing found does not offer a help question', (tester) async {
       await _pumpSearch(tester);
       await _type(tester, '怎么把对话导出成 PDF');
       expect(find.text('没有找到相关设置'), findsOneWidget);
-      await tester.tap(find.text('问 AI：「怎么把对话导出成 PDF」'));
-      await tester.pumpAndSettle();
-      expect(_container(tester).read(composeInboxProvider).single.text, '/dsh-go-guide 怎么把对话导出成 PDF');
+      expect(find.textContaining('问 AI'), findsNothing);
     });
 
     testWidgets('no 问 AI in 网页模式', (tester) async {

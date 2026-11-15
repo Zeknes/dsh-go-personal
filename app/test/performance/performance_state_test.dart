@@ -92,18 +92,15 @@ void main() {
       await container.read(performancePrefsProvider.notifier).ready;
       final prefs = container.read(performancePrefsProvider);
       expect(prefs.mode, PerformanceMode.full);
-      expect(prefs.refreshRate, RefreshRateMode.max);
       final stored = await SharedPreferences.getInstance();
       expect(stored.containsKey('performance.mode'), isFalse);
-      expect(stored.containsKey('performance.refresh_rate'), isFalse);
     });
 
     test('saved performance and refresh choices are retained', () async {
-      SharedPreferences.setMockInitialValues({'performance.mode': 'light', 'performance.refresh_rate': 'system'});
+      SharedPreferences.setMockInitialValues({'performance.mode': 'light'});
       start();
       await container.read(performancePrefsProvider.notifier).ready;
       expect(container.read(performancePrefsProvider).mode, PerformanceMode.light);
-      expect(container.read(performancePrefsProvider).refreshRate, RefreshRateMode.system);
     });
 
     test('hardware Enter preference defaults off, persists, and reloads', () async {

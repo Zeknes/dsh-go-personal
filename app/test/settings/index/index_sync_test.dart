@@ -23,7 +23,6 @@ import 'package:dsh_app/ui/phone/phone_widgets.dart';
 import 'package:dsh_app/ui/providers/providers_page.dart';
 import 'package:dsh_app/ui/remote/remote_screen.dart';
 import 'package:dsh_app/ui/settings/appearance/appearance_page.dart';
-import 'package:dsh_app/ui/settings/about_page.dart';
 import 'package:dsh_app/ui/settings/background_guide_page.dart';
 import 'package:dsh_app/ui/settings/notification_settings.dart';
 import 'package:dsh_app/ui/settings/interface_page.dart';
@@ -31,7 +30,6 @@ import 'package:dsh_app/ui/settings/performance_page.dart';
 import 'package:dsh_app/ui/settings/personalization_page.dart';
 import 'package:dsh_app/ui/settings/privacy_page.dart';
 import 'package:dsh_app/ui/settings/settings_screen.dart';
-import 'package:dsh_app/state/app_info.dart';
 import 'package:dsh_app/ui/settings/index/spots.dart';
 import 'package:dsh_app/ui/settings/settings_widgets.dart';
 import 'package:dsh_client/dsh_client.dart';
@@ -51,8 +49,6 @@ import '../../shell/golden_harness.dart';
 /// Rows that carry no spot on purpose, by page: a choice in a list (the
 /// list's spot covers it) or a row that only shows for a moment.
 final Map<SettingsPageId, List<String Function(L10n)>> _unlisted = {
-  // The author's profiles are links, not settings to look up.
-  SettingsPageId.about: [(_) => AppInfo.author, (l) => l.hubAboutBilibili, (l) => l.hubAboutX, (l) => l.hubAboutGithub],
   SettingsPageId.performance: [
     (l) => l.performanceAuto,
     (l) => l.performanceFull,
@@ -227,10 +223,6 @@ void main() {
       // Only with this phone's engine files at hand.
       absent: {'page:replyPrefs'},
     );
-  });
-
-  testWidgets('关于 DSH Go', (tester) async {
-    await _check(tester, SettingsPageId.about, () => _app(tester, const AboutPage(), _running()));
   });
 
   testWidgets('主题', (tester) async {

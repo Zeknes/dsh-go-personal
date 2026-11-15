@@ -4,9 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../l10n/l10n.dart';
-import '../../update/update_config.dart';
 
-final starProjectPage = Uri.https('github.com', '/$updateRepo');
+final starProjectPage = Uri.https('github.com', '/Zeknes/dsh-pure');
 
 final starLinkOpenerProvider = Provider<Future<bool> Function(Uri)>(
   (ref) => (uri) => launchUrl(uri, mode: LaunchMode.externalApplication).catchError((_) => false),

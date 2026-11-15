@@ -16,7 +16,6 @@
   "askAiAboutApp": "About the DSH Go app: {question}",
   "askAiWithGuide": "About the DSH Go app: {question}\nPlease answer from the attached guide.",
   "askAiNoGuide": "This host doesn’t have the DSH Go guide, so answers may be off",
-  "askAiQuestionOverview": "What can DSH Go do, and where should I start?",
   "askAiQuestionPhoneControl": "How does phone control work, and what are the risks?",
   "askAiQuestionPhoneAlways": "What changes with “Always skip confirmation” in phone control, and how is it riskier than asking each time?",
   "askAiQuestionAppRules": "What is the app list in phone control for, and what are the risks of allowing banking and payment apps?",

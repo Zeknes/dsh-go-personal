@@ -36,27 +36,7 @@
       },
       "additionalProperties": false
     },
-    "emptyState": {
-      "type": "object",
-      "properties": {
-        "suggestions": {
-          "type": "array",
-          "maxItems": 6,
-          "items": {
-            "type": "object",
-            "required": ["title", "action"],
-            "properties": {
-              "title": { "type": "string", "minLength": 1, "maxLength": 20 },
-              "subtitle": { "type": "string", "minLength": 1, "maxLength": 40 },
-              "action": { "$ref": "#/$defs/action" }
-            },
-            "additionalProperties": false
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    "drawer": {
+      "drawer": {
       "type": "object",
       "properties": {
         "groups": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/drawerGroup" } },
@@ -208,9 +188,6 @@
       "headerLabelMax": 8,
       "quickActionsMax": 8,
       "quickLabelMax": 10,
-      "suggestionsMax": 6,
-      "suggestionTitleMax": 20,
-      "suggestionSubtitleMax": 40,
       "shortcutsMax": 20,
       "sendTextMax": 2000,
       "commandArgsMax": 500,

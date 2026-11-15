@@ -28,9 +28,6 @@ import 'compose_inbox.dart';
 /// What a 「问 AI」 entry asks. Each has one question and the guide page that
 /// answers it; entries exist only where the guide covers the topic.
 enum AskAiTopic {
-  /// 设置 › 关于 › 使用帮助.
-  overview,
-
   /// 手机操控's page and the disclosure before it is turned on.
   phoneControl,
 
@@ -56,7 +53,6 @@ enum AskAiTopic {
   remote;
 
   String get question => switch (this) {
-    overview => appL10n.askAiQuestionOverview,
     phoneControl => appL10n.askAiQuestionPhoneControl,
     phoneAlways => appL10n.askAiQuestionPhoneAlways,
     appRules => appL10n.askAiQuestionAppRules,
@@ -69,7 +65,7 @@ enum AskAiTopic {
 
   /// The page of `docs/guide/<lang>/` that answers [question].
   String get guidePage => switch (this) {
-    overview || fullAccess || phoneFiles => '10-settings',
+    fullAccess || phoneFiles => '10-settings',
     phoneControl || phoneAlways || appRules => '04-phone-control',
     allowForChat => '01-chat',
     plugins => '08-plugins',

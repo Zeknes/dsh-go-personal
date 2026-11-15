@@ -108,11 +108,6 @@
       "message": "未知的键，已忽略"
     },
     {
-      "pointer": "/emptyState/suggestions",
-      "kind": "invalid",
-      "message": "应该是数组"
-    },
-    {
       "pointer": "/drawer/groups/1",
       "kind": "invalid",
       "message": "不支持的值「tomorrow」，可选：pinned、folders、today、yesterday、thisWeek、earlier"

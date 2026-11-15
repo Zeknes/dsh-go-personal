@@ -77,6 +77,10 @@ final skillsProvider = FutureProvider.autoDispose.family<List<SkillInfo>?, Strin
 
 // ── Agent 预设 ────────────────────────────────────────────────────────────────
 
+List<AgentPresetInfo> visibleAgentPresets(List<AgentPresetInfo> presets) => presets
+    .where((p) => p.id != 'dsh-go-companion' && p.id != 'dsh-go-companion-full')
+    .toList();
+
 /// Agent presets in the Host's order; refreshed when the default changes.
 final agentPresetsProvider = FutureProvider.autoDispose<List<AgentPresetInfo>?>((ref) async {
   final client = _client(ref);

@@ -10,7 +10,6 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.github.ccch1mneyyy.dsh_app.voice.VoiceDiagnostics
 import io.github.ccch1mneyyy.dsh_app.runtime.RuntimeManifest
-import io.github.ccch1mneyyy.dsh_app.update.ApkInstaller
 import org.json.JSONObject
 import java.io.File
 import java.io.RandomAccessFile
@@ -91,7 +90,7 @@ class DiagnosticsPlugin : FlutterPlugin, io.flutter.embedding.engine.plugins.act
         val pkg = runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull()
         return mapOf(
             "versionName" to pkg?.versionName,
-            "versionCode" to pkg?.let { ApkInstaller.versionCodeOf(it) },
+            "versionCode" to pkg?.let { if (Build.VERSION.SDK_INT >= 28) it.longVersionCode else @Suppress("DEPRECATION") it.versionCode.toLong() },
             // .../lib/arm64 or .../lib/x86_64: the ABI this APK was built for.
             "abi" to context.applicationInfo.nativeLibraryDir?.let { File(it).name },
         )

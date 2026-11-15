@@ -33,7 +33,6 @@
       { "label": "多余", "action": { "type": "send", "text": "ok", "auto": true }, "icon": "bolt" }
     ]
   },
-  "emptyState": { "suggestions": "nope" },
   "drawer": { "groups": ["today", "tomorrow", "today"], "sort": "name", "filter": "unread", "pinnedFirst": true },
   "density": "cozy",
   "hide": ["turnFooter", "everything", 3, "turnFooter"],

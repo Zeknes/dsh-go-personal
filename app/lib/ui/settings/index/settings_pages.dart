@@ -22,7 +22,6 @@ import '../../plugins/plugin_inventory_page.dart';
 import '../../plugins/plugins_screen.dart';
 import '../../providers/providers_page.dart';
 import '../../remote/remote_screen.dart';
-import '../about_page.dart';
 import '../appearance/appearance_page.dart';
 import '../background_guide_page.dart';
 import '../diagnostics_page.dart';
@@ -79,7 +78,6 @@ Widget settingsPage(SettingsPageId id, {String? sessionId}) => switch (id) {
   SettingsPageId.personalization => const PersonalizationPage(),
   SettingsPageId.interface => const InterfacePage(),
   SettingsPageId.privacy => const PrivacyPage(),
-  SettingsPageId.about => const AboutPage(),
 };
 
 /// What a settings link id opens: a page (by any of its link ids), or the

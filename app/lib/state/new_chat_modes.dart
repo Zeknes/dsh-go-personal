@@ -13,9 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'hosts_state.dart' show HostRef;
 import 'models_state.dart' show modelSelectionScopeProvider;
 
-/// Presets a new chat never offers: the companion room's own preset is set up
-/// by the room, not chosen for an ordinary conversation.
-const hiddenNewChatPresets = {'dsh-go-companion-full'};
+/// Legacy built-in companion presets are not offered for new chats.
+const hiddenNewChatPresets = {'dsh-go-companion', 'dsh-go-companion-full'};
 
 /// What the new-chat screen asked for. Null fields keep the Host's default.
 class NewChatModes {

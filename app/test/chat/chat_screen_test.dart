@@ -189,8 +189,6 @@ void main() {
           Scaffold(
             body: ChatEmptyState(
               connected: !failed,
-              onSuggestion: (_) {},
-              suggestions: const [],
               workspace: failed ? null : '项目',
               onWorkspace: () {},
               onReconnect: failed ? () {} : null,
@@ -423,15 +421,11 @@ void main() {
   });
 
   group('new chat', () {
-    testWidgets('greets and fills the composer from a suggestion', (tester) async {
+    testWidgets('greets without startup suggestions', (tester) async {
       await pumpScreen(tester, ChatHarness());
       expect(find.text('早上好'), findsOneWidget);
       expect(find.text('新对话'), findsOneWidget);
-
-      await tester.tap(find.text(defaultSuggestions.first.label));
-      await tester.pump();
-      final field = tester.widget<TextField>(find.byType(TextField));
-      expect(field.controller!.text, defaultSuggestions.first.prompt);
+      expect(find.text('看看工作区'), findsNothing);
     });
 
     testWidgets('first send creates, selects, then sends', (tester) async {

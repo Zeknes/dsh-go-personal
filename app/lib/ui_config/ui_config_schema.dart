@@ -20,7 +20,6 @@ abstract final class UiSchema {
     'version',
     'header',
     'composer',
-    'emptyState',
     'drawer',
     'density',
     'hide',
@@ -44,9 +43,6 @@ abstract final class UiSchema {
 
   static const quickActionsMax = 8;
   static const quickLabelMax = 10;
-  static const suggestionsMax = 6;
-  static const suggestionTitleMax = 20;
-  static const suggestionSubtitleMax = 40;
 
   // ── drawer, density, hide, theme, pet ──────────────────────────────────
 

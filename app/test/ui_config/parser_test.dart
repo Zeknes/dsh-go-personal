@@ -62,7 +62,6 @@ void main() {
         const UiHeaderCustomItem(id: 'daily', icon: 'bolt', label: '日报', action: UiSendAction('按模板写今天的日报')),
       ]);
       expect(c.quickActions![1].action, const UiCommandAction('compact'));
-      expect(c.suggestions!.single.subtitle, '读工作区里的 TODO.md');
       expect(c.drawerGroups, UiDrawerGroup.values);
       expect(c.drawerSort, UiDrawerSort.activity);
       expect(c.drawerFilter, UiDrawerFilter.all);
@@ -76,7 +75,7 @@ void main() {
       expect(c.seats, {
         'conversation.input.dock': {'dsh-cost-meter': UiSeatMode.hidden},
       });
-      expect(load.appliedCount, 15);
+      expect(load.appliedCount, 14);
       expect(c.entries[UiSettingKey.themeMode]!.pointer, '/theme/mode');
       expect(c.entries[UiSettingKey.hide(UiHideItem.tokenCount)]!.pointer, '/hide/1');
       expect(
@@ -117,8 +116,6 @@ void main() {
       expect((c.headerActions!.single as UiHeaderCustomItem).label, '这是一个很长很长');
       expect(c.quickActions!.map((q) => q.label), ['两 行 标签', '十个字以内的标签啊啊', '超过十个字的标签啊啊']);
       expect((c.quickActions!.first.action as UiSendAction).text, '第一行\n第二行');
-      expect(c.suggestions!.map((s) => s.title.runes.length), [20, 20]);
-      expect(c.suggestions!.last.title, '😀' * 20);
     });
 
     test('actions: https only, no userinfo, command slash removed, args trimmed', () {

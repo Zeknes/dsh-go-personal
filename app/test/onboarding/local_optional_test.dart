@@ -614,7 +614,6 @@ void main() {
           home: Scaffold(
             body: ChatEmptyState(
               connected: false,
-              onSuggestion: (_) {},
               idle: ChatIdleAction(message: '引擎未运行', label: '启动引擎', onTap: () => taps++),
             ),
           ),

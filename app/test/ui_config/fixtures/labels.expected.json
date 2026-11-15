@@ -1,5 +1,5 @@
 {
-  "applied": 3,
+  "applied": 2,
   "fatal": false,
   "issues": [
     {
@@ -11,26 +11,6 @@
       "pointer": "/composer/quickActions/2/label",
       "kind": "adjusted",
       "message": "超过 10 个字，已截断"
-    },
-    {
-      "pointer": "/emptyState/suggestions/0/subtitle",
-      "kind": "invalid",
-      "message": "不能为空"
-    },
-    {
-      "pointer": "/emptyState/suggestions/1/title",
-      "kind": "adjusted",
-      "message": "超过 20 个字，已截断"
-    },
-    {
-      "pointer": "/emptyState/suggestions/1/subtitle",
-      "kind": "adjusted",
-      "message": "超过 40 个字，已截断"
-    },
-    {
-      "pointer": "/emptyState/suggestions/2/title",
-      "kind": "adjusted",
-      "message": "超过 20 个字，已截断"
     }
   ]
 }

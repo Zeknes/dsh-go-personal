@@ -176,7 +176,6 @@ class _Validator {
   UiConfig root(Map<String, Object?> root) {
     List<UiHeaderItem>? headerActions;
     List<UiQuickAction>? quickActions;
-    List<UiSuggestion>? suggestions;
     List<UiDrawerGroup>? drawerGroups;
     UiDrawerSort? drawerSort;
     UiDrawerFilter? drawerFilter;
@@ -200,13 +199,6 @@ class _Validator {
             unknownKeys(map, p, const ['quickActions']);
             if (map.containsKey('quickActions')) {
               quickActions = quickActionList(map['quickActions'], child(p, 'quickActions'));
-            }
-          }
-        case 'emptyState':
-          if (object(value, p) case final map?) {
-            unknownKeys(map, p, const ['suggestions']);
-            if (map.containsKey('suggestions')) {
-              suggestions = suggestionList(map['suggestions'], child(p, 'suggestions'));
             }
           }
         case 'drawer':
@@ -289,7 +281,6 @@ class _Validator {
     return UiConfig(
       headerActions: headerActions,
       quickActions: quickActions,
-      suggestions: suggestions,
       drawerGroups: drawerGroups,
       drawerSort: drawerSort,
       drawerFilter: drawerFilter,
@@ -539,35 +530,6 @@ class _Validator {
     }
     if (out.isEmpty) return null;
     entry(UiSettingKey.quickActions, pointer, [for (final q in out) q.toJson()]);
-    return List.unmodifiable(out);
-  }
-
-  List<UiSuggestion>? suggestionList(Object? value, String pointer) {
-    final list = array(value, pointer);
-    if (list == null) return null;
-    final out = <UiSuggestion>[];
-    for (final (index, item) in list.indexed) {
-      final ip = '$pointer/$index';
-      final map = object(item, ip);
-      if (map == null) continue;
-      unknownKeys(map, ip, const ['title', 'subtitle', 'action']);
-      final title = requiredLabel(map, ip, 'title', UiSchema.suggestionTitleMax);
-      String? subtitle;
-      var ok = true;
-      if (map.containsKey('subtitle')) {
-        subtitle = label(map['subtitle'], child(ip, 'subtitle'), UiSchema.suggestionSubtitleMax);
-        if (subtitle == null) ok = false;
-      }
-      final action = requiredAction(map, ip);
-      if (title == null || action == null || !ok) continue;
-      if (out.length >= UiSchema.suggestionsMax) {
-        issue(ip, UiMessages.tooMany(UiSchema.suggestionsMax), UiIssueKind.ignored);
-        continue;
-      }
-      out.add(UiSuggestion(title: title, subtitle: subtitle, action: action));
-    }
-    if (out.isEmpty) return null;
-    entry(UiSettingKey.suggestions, pointer, [for (final s in out) s.toJson()]);
     return List.unmodifiable(out);
   }
 

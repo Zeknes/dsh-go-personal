@@ -45,7 +45,6 @@ dsh-go App 会读 `$DSH_HOME/dsh-go/ui.json`（`DSH_HOME` 默认 `~/.dsh`），�
 | `hide.pluginCapsule` | 已接线：隐藏 App 的插件聚合入口 |
 | `plugins.seats` | 已接线：插件座位生效 |
 | `header.actions` | 只校验，尚未接线 |
-| `emptyState.suggestions` | 只校验，尚未接线 |
 | `drawer.groups` / `drawer.sort` / `drawer.filter` | 只校验，尚未接线 |
 | `density` | 只校验，尚未接线 |
 | `theme.accent` / `theme.accentPreset` | 只校验，尚未接线 |
@@ -65,8 +64,6 @@ dsh-go App 会读 `$DSH_HOME/dsh-go/ui.json`（`DSH_HOME` 默认 `~/.dsh`），�
   "composer": { "quickActions": [
     { "label": "总结", "action": { "type": "send", "text": "总结上面的对话，列三条要点" } },
     { "label": "压缩", "action": { "type": "command", "name": "compact" } } ] },
-  "emptyState": { "suggestions": [
-    { "title": "看看今天的待办", "subtitle": "读工作区里的 TODO.md", "action": { "type": "send", "text": "读一下 TODO.md，告诉我今天先做什么" } } ] },
   "drawer": { "groups": ["pinned", "folders", "today", "yesterday", "thisWeek", "earlier"], "sort": "activity", "filter": "all" },
   "density": "compact",
   "hide": ["turnFooter", "tokenCount"],
@@ -81,7 +78,6 @@ dsh-go App 会读 `$DSH_HOME/dsh-go/ui.json`（`DSH_HOME` 默认 `~/.dsh`），�
 | `version` | 必填，`1` |
 | `header.actions` | 聊天顶栏右侧按钮，按顺序显示。内置：`newChat`（新对话）、`detail`（对话详情）、`schedule`（定时任务时钟）、`agents`（子代理胶囊）、`model`（模型胶囊）。没列出的内置按钮会隐藏，`[]` 全部隐藏。自定义按钮最多 3 个：`id`（小写字母开头，字母数字和 -）、`icon`（见下）、`label`（≤ 8 字）、`action` |
 | `composer.quickActions` | 输入框上方的胶囊，≤ 8 个；`label` ≤ 10 字 + `action`。生成回复时自动收起 |
-| `emptyState.suggestions` | 新对话页的建议卡，≤ 6 张；`title` ≤ 20 字，`subtitle`（可选）≤ 40 字，`action` |
 | `drawer.groups` | 对话列表分组的顺序和可见性：`pinned` 置顶、`folders` 文件夹、`today`、`yesterday`、`thisWeek`、`earlier`；没列出的分组隐藏 |
 | `drawer.sort` | `activity`（最近活动）或 `created`（创建时间） |
 | `drawer.filter` | 打开抽屉时的筛选：`all`、`running`、`pending`、`unread` |

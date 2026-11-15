@@ -33,17 +33,6 @@ class InterfacePage extends ConsumerWidget {
       title: l10n.hubSettingsInterface,
       children: [
         SettingsSection(
-          title: l10n.hubStartPage,
-          children: [
-            SettingsSwitchTile(
-              spot: Spots.chatSuggestions,
-              subtitle: l10n.hubChatSuggestionsHint,
-              value: settings.chatSuggestions,
-              onChanged: (v) => unawaited(ref.read(settingsProvider.notifier).setChatSuggestions(v)),
-            ),
-          ],
-        ),
-        SettingsSection(
           title: l10n.hubSettingsChat,
           children: [
             SettingsSwitchTile(

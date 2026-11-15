@@ -129,25 +129,6 @@ class UiQuickAction {
   int get hashCode => Object.hash(label, action);
 }
 
-/// A card on the empty new-chat screen.
-@immutable
-class UiSuggestion {
-  const UiSuggestion({required this.title, this.subtitle, required this.action});
-
-  final String title;
-  final String? subtitle;
-  final UiAction action;
-
-  Map<String, Object?> toJson() => {'title': title, 'subtitle': ?subtitle, 'action': action.toJson()};
-
-  @override
-  bool operator ==(Object other) =>
-      other is UiSuggestion && other.title == title && other.subtitle == subtitle && other.action == action;
-
-  @override
-  int get hashCode => Object.hash(title, subtitle, action);
-}
-
 /// A hardware-keyboard shortcut; [keys] is canonical (`ctrl+alt+shift+k`,
 /// modifiers in that order, lower case).
 @immutable
@@ -250,7 +231,6 @@ class UiSettingKey {
 
   static const headerActions = UiSettingKey._('header.actions');
   static const quickActions = UiSettingKey._('composer.quickActions');
-  static const suggestions = UiSettingKey._('emptyState.suggestions');
   static const drawerGroups = UiSettingKey._('drawer.groups');
   static const drawerSort = UiSettingKey._('drawer.sort');
   static const drawerFilter = UiSettingKey._('drawer.filter');
@@ -332,7 +312,6 @@ class UiConfig {
   const UiConfig({
     this.headerActions,
     this.quickActions,
-    this.suggestions,
     this.drawerGroups,
     this.drawerSort,
     this.drawerFilter,
@@ -351,7 +330,6 @@ class UiConfig {
   /// In display order; built-ins not listed are hidden. `[]` hides them all.
   final List<UiHeaderItem>? headerActions;
   final List<UiQuickAction>? quickActions;
-  final List<UiSuggestion>? suggestions;
 
   /// Groups in display order; groups not listed are hidden.
   final List<UiDrawerGroup>? drawerGroups;
@@ -388,7 +366,6 @@ class UiConfig {
     return UiConfig(
       headerActions: keep(UiSettingKey.headerActions) ? headerActions : null,
       quickActions: keep(UiSettingKey.quickActions) ? quickActions : null,
-      suggestions: keep(UiSettingKey.suggestions) ? suggestions : null,
       drawerGroups: keep(UiSettingKey.drawerGroups) ? drawerGroups : null,
       drawerSort: keep(UiSettingKey.drawerSort) ? drawerSort : null,
       drawerFilter: keep(UiSettingKey.drawerFilter) ? drawerFilter : null,

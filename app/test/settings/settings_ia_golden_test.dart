@@ -12,7 +12,6 @@ import 'package:dsh_app/state/account_state.dart';
 import 'package:dsh_app/state/balance_state.dart';
 import 'package:dsh_app/state/hosts_state.dart';
 import 'package:dsh_app/state/settings_state.dart';
-import 'package:dsh_app/ui/settings/about_page.dart';
 import 'package:dsh_app/ui/settings/interface_page.dart';
 import 'package:dsh_app/ui/settings/personalization_page.dart';
 import 'package:dsh_app/ui/settings/privacy_page.dart';
@@ -86,7 +85,6 @@ void main() {
     ],
   );
 
-  goldenBoth('about', () => const AboutPage(), overrides: _local);
 
   // The two pages that also show the host's own settings.
   for (final (name, page) in [('interface', const InterfacePage()), ('privacy', const PrivacyPage())]) {

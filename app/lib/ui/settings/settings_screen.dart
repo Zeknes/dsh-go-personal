@@ -7,7 +7,6 @@ import '../../l10n/l10n.dart';
 import '../../runtime/local_footprint.dart';
 import '../../runtime/runtime_state.dart';
 import '../../state/account_state.dart';
-import '../../state/ask_ai.dart' show askAiAvailableProvider;
 import '../../state/balance_state.dart';
 import '../../state/connection_state.dart';
 import '../../state/engine_settings_state.dart';
@@ -17,11 +16,9 @@ import '../../state/phone_state.dart';
 import '../../state/plugins_state.dart';
 import '../../state/sessions_state.dart';
 import '../../state/settings_state.dart';
-import '../../state/update_state.dart';
 import '../account/account_page.dart';
 import '../account/account_widgets.dart';
 import '../chat/balance_widgets.dart' show formatMoney;
-import '../common/ask_ai.dart';
 import '../common/overview_card.dart';
 import '../common/search_capsule.dart';
 import '../common/status_chip.dart';
@@ -44,8 +41,6 @@ import '../shell/brand_mark.dart';
 import '../shell/page_frame.dart';
 import '../theme/app_icons.dart';
 import '../theme/theme.dart';
-import '../update/update_tiles.dart' show UpdateBadge;
-import 'about_page.dart';
 import 'appearance/appearance_page.dart';
 import 'background_guide_page.dart';
 import 'diagnostics_page.dart';
@@ -118,9 +113,6 @@ class SettingsScreen extends ConsumerWidget {
     // 主机.
     final ssh = ref.watch(hostsProvider.select((s) => s.ssh.length));
     final hostName = host.isLocal ? l10n.commonThisPhone : ref.watch(hostNameProvider(host)) ?? l10n.commonRemoteHost;
-    // 帮助与关于.
-    final update = ref.watch(appUpdateProvider);
-    final newVersion = update.hasUpdate && !update.isSkipped;
 
     final page = AppPage.list(
       title: l10n.commonSettings,
@@ -285,15 +277,6 @@ class SettingsScreen extends ConsumerWidget {
         SettingsSection(
           title: l10n.hubGroupHelp,
           children: [
-            if (ref.watch(askAiAvailableProvider))
-              SettingsTile(
-                key: const ValueKey('settings-ask-ai'),
-                icon: AppIcons.askAi,
-                tint: SettingsHues.help,
-                spot: Spots.askAi,
-                value: Text(l10n.askAiTooltip),
-                onTap: () => unawaited(askAi(context, AskAiTopic.overview)),
-              ),
             SettingsTile(
               icon: AppIcons.diagnostics,
               tint: SettingsHues.help,
@@ -303,11 +286,12 @@ class SettingsScreen extends ConsumerWidget {
             SettingsTile(
               icon: AppIcons.info,
               tint: SettingsHues.help,
-              spot: SettingsIndex.entry(SettingsPageId.about),
-              value: newVersion
-                  ? UpdateBadge(l10n.hubAboutNewVersion)
-                  : Text(update.current.name, style: AppType.tabular(Theme.of(context).textTheme.bodyMedium!)),
-              onTap: () => _push(context, const AboutPage()),
+              spot: Spots.licenses,
+              onTap: () => showLicensePage(
+                context: context,
+                applicationName: 'DSH Pure',
+                applicationLegalese: 'DSH Go: ccch1mneyyy · AGPL-3.0',
+              ),
             ),
           ],
         ),

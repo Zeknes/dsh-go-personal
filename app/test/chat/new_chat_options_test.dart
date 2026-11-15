@@ -6,9 +6,8 @@
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/models_state.dart' show pendingModelProvider;
 import 'package:dsh_app/state/new_chat_modes.dart';
-import 'package:dsh_app/state/features_state.dart' show PermissionOption, PermissionState, agentPresetsProvider;
+import 'package:dsh_app/state/features_state.dart' show PermissionOption, PermissionState, agentPresetsProvider, visibleAgentPresets;
 import 'package:dsh_app/ui/chat/chat_screen.dart';
-import 'package:dsh_app/ui/chat/empty_actions.dart';
 import 'package:dsh_app/ui/chat/model_sheet.dart' show ModelChip;
 import 'package:dsh_app/ui/chat/new_chat_options.dart';
 import 'package:dsh_app/ui/theme/app_icons.dart';
@@ -89,9 +88,18 @@ Future<void> _send(WidgetTester tester, String text) async {
 }
 
 void main() {
+  test('only the two legacy companion IDs are hidden, not user names', () {
+    final visible = visibleAgentPresets(const [
+      AgentPresetInfo(id: 'dsh-go-companion', name: '伙伴'),
+      AgentPresetInfo(id: 'dsh-go-companion-full', name: '伙伴·完整'),
+      AgentPresetInfo(id: 'user-custom', name: '伙伴'),
+      AgentPresetInfo(id: 'standard'),
+      AgentPresetInfo(id: 'ptc'),
+    ]);
+    expect(visible.map((p) => p.id), ['user-custom', 'standard', 'ptc']);
+  });
   setUpAll(() async {
     await loadTestFonts();
-    tipStart = (_) => 0;
   });
 
   testWidgets('chips name the Host defaults; companion preset is not offered', (tester) async {

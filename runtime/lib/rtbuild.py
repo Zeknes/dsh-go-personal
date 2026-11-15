@@ -424,7 +424,7 @@ def cmd_patch_dsh(args):
         os.replace(pins_path + ".tmp", pins_path)
         print("recorded pins for DSH %s in %s" % (args.dsh_version, pins_path))
     if "zzzzzz-session-deletion.diff" in applied:
-        # Source-owned companion module, installed only alongside the vetted rc4 seam.
+        # Source-owned session deletion module, installed alongside the vetted patch.
         source = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "session-deletion", "core.mjs")
         target = os.path.join(args.prefix, "node_modules", "@deepseek-ai", "dsh-session-persistence-jsonl", "lib", "dsh-go-deletion.mjs")
         tmp = target + ".dsh-app-patch"
@@ -843,9 +843,7 @@ def bridge_shared_rows():
     source = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bridge", "dsh-go-bridge", "cordis.patch.yml")
     with open(source, encoding="utf-8") as patch:
         rows = patch.read().split("    # --- shared rows ---\n", 1)[1]
-    # Local runtimes load the bridge by path; it is not a profile dependency.
-    return rows.replace("name: dsh-go-bridge/companion/full-context",
-                        "name: %s/lib/companion/full-context.js" % DSH_GO_BRIDGE)
+    return rows
 
 
 def overlay_entries(runtime_info, with_python=False, with_pnpm=False, with_bridge=False):
