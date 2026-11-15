@@ -20,7 +20,7 @@ from unittest import mock
 
 import apk_delta
 from build_number import MAX_VERSION_CODE
-from release_assets import BADGING_RE, ReleaseError, apk_version, check_abis, find_aapt2, patch_from, previous_releases, published_apk, release_build
+from release_assets import BADGING_RE, ReleaseError, apk_version, check_abis, find_aapt2, patch_from, previous_releases, published_apk, pure_release_tag, release_build
 
 # Stands in for gh: `release list` prints $FAKE_RELEASES, `release download`
 # copies the asset files from $FAKE_ASSETS/<tag>/; every call goes to $FAKE_LOG.
@@ -62,6 +62,10 @@ def sha(path):
 
 
 class ReleaseBuildTest(unittest.TestCase):
+    def test_tag_includes_build_and_cannot_reuse_upstream_tag(self):
+        self.assertEqual(pure_release_tag('1.0.16', 11152141), 'v1.0.16+11152141')
+        self.assertNotEqual(pure_release_tag('1.0.16', 11152141), 'v1.0.16')
+
     def test_sdk_tool_lookup_uses_platform_filename_newest_version_and_path_first(self):
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)

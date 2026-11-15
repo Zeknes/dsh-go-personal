@@ -156,10 +156,14 @@ def listed(sums: pathlib.Path, name: str) -> str | None:
     return None
 
 
+def pure_release_tag(name: str, build: int) -> str:
+    return f"v{name}+{build}"
+
+
 def published_apk(tag: str, cache: pathlib.Path) -> pathlib.Path:
     """[tag]'s arm64 APK from its GitHub release, kept in [cache], as the
     release's SHA256SUMS says it is."""
-    version = tag.removeprefix('v')
+    version = tag.removeprefix('v').partition('+')[0]
     sums = cache / tag / "SHA256SUMS"
     names = [f"dsh-pure-{version}-arm64.apk"]
     for name in names:
@@ -285,7 +289,7 @@ def main() -> None:
             entry["url"] = args.base_url.rstrip("/") + "/" + asset
         assets[flavor] = entry
 
-    tag = f"v{name}"
+    tag = pure_release_tag(name, build)
     for stale in args.out.glob("*.dshdelta"):
         stale.unlink()
     patches = []
