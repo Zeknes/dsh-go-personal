@@ -898,15 +898,6 @@ abstract final class Spots {
     title: (l) => l.hubSettingsShareConfig,
     keywords: (l) => l.searchKwShareConfig,
   );
-  static final chatLogUpload = SettingSpot(
-    'chat-log-upload',
-    page: SettingsPageId.privacy,
-    title: (l) => l.engineChatLogUpload,
-    keywords: (l) => l.searchKwChatLogUpload,
-    field: const SpotField(['session-log-deepseek'], 'enabled'),
-    condition: SpotCondition.engineField,
-  );
-
   // 本机引擎.
   static final autoStart = SettingSpot(
     'auto-start',
@@ -1075,7 +1066,6 @@ final _rows = <SettingSpot>[
   Spots.notifyLive,
   Spots.notifySystem,
   Spots.shareConfig,
-  Spots.chatLogUpload,
   Spots.autoStart,
   Spots.autoSafe,
   Spots.safeMode,

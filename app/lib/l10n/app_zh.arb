@@ -10791,21 +10791,6 @@
   "speechCallVisualMono": "细线",
   "speechCallVisualGlass": "光球",
   "speechInsecure": "这个云端服务的地址不是 https，Key 不能这样发出去",
-  "starPromptTitle": "{hours, plural, =0{本鱼已经在 DSH Go 里陪你半个小时啦⁠~} =1{本鱼已经在 DSH Go 里陪你一个小时啦⁠~} other{本鱼已经在 DSH Go 里陪你 {hours} 个小时啦⁠~}}",
-  "@starPromptTitle": {
-    "description": "The star prompt's first line. hours is the whole hours of use so far, rounded down; 0 is half an hour (the first ask comes after 30 minutes). The word joiner keeps the ~ on the line of the word before it.",
-    "placeholders": {
-      "hours": {
-        "type": "int"
-      }
-    }
-  },
-  "starPromptBody": "这是一个免费开源的项目，如果它让你的移动端体验更好了一点，拜托点个 Star 支持一下，这对本鱼是很大的鼓励！",
-  "starPromptPlea": "拜托你啦~ 这真的很重要！！",
-  "starPromptStar": "去 GitHub 点 Star",
-  "starPromptDone": "已经点过啦",
-  "starPromptLater": "下次再说",
-  "starSettingsTitle": "给 DSH Go 点个 star",
   "hubStartPage": "起始页",
   "hubChatSuggestions": "聊天建议",
   "hubChatSuggestionsHint": "显示起始页的聊天建议",
@@ -13966,6 +13951,7 @@
   "tavernPackCastUnproven": "确认不了这个角色是从这个包导入的",
   "tavernPackCastOtherVersion": "关联的角色来自这个包的另一个版本",
   "tavernPackExportChanged": "导出的来源或选项变了，请重新预览",
+  "starSettingsTitle": "给 DSH Go 点个 star",
   "updateCheck": "检查更新",
   "updateAutoCheck": "自动检查更新",
   "updateAutoCheckDaily": "每天检查一次",
@@ -14107,7 +14093,6 @@
     }
   },
   "updateExportApkFailed": "没能导出安装包",
-  "updateStarProject": "去 Star",
   "updateCancelDownload": "取消下载",
   "updateDownloadInBackground": "后台下载",
   "updateVerifying": "正在校验…",

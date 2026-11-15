@@ -18743,37 +18743,6 @@ class L10nEn extends L10n {
   String get speechInsecure => 'That service\'s address isn\'t https; the key can\'t be sent that way';
 
   @override
-  String starPromptTitle(int hours) {
-    String _temp0 = intl.Intl.pluralLogic(
-      hours,
-      locale: localeName,
-      other: 'I’ve kept you company in DSH Go for $hours hours now~',
-      one: 'I’ve kept you company in DSH Go for an hour now~',
-      zero: 'I’ve kept you company in DSH Go for half an hour now~',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get starPromptBody =>
-      'DSH Go is free and open source. If it’s made your phone a little nicer to use, please give it a Star — it means so much to this little whale!';
-
-  @override
-  String get starPromptPlea => 'Pretty please~ It really matters!!';
-
-  @override
-  String get starPromptStar => 'Star it on GitHub';
-
-  @override
-  String get starPromptDone => 'Already starred';
-
-  @override
-  String get starPromptLater => 'Maybe later';
-
-  @override
-  String get starSettingsTitle => 'Star DSH Go on GitHub';
-
-  @override
   String get hubStartPage => 'Start page';
 
   @override
@@ -23957,6 +23926,9 @@ class L10nEn extends L10n {
   String get tavernPackExportChanged => 'The export\'s sources or options changed; preview again';
 
   @override
+  String get starSettingsTitle => 'Star DSH Go on GitHub';
+
+  @override
   String get updateCheck => 'Check for updates';
 
   @override
@@ -24205,9 +24177,6 @@ class L10nEn extends L10n {
 
   @override
   String get updateExportApkFailed => 'Couldn\'t save the package';
-
-  @override
-  String get updateStarProject => 'Star it';
 
   @override
   String get updateCancelDownload => 'Cancel download';

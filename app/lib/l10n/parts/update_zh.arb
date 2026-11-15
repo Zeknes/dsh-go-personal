@@ -1,4 +1,5 @@
 {
+  "starSettingsTitle": "给 DSH Go 点个 star",
   "updateCheck": "检查更新",
   "updateAutoCheck": "自动检查更新",
   "updateAutoCheckDaily": "每天检查一次",
@@ -140,7 +141,6 @@
     }
   },
   "updateExportApkFailed": "没能导出安装包",
-  "updateStarProject": "去 Star",
   "updateCancelDownload": "取消下载",
   "updateDownloadInBackground": "后台下载",
   "updateVerifying": "正在校验…",

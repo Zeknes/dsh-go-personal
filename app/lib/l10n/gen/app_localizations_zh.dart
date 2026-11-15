@@ -17761,36 +17761,6 @@ class L10nZh extends L10n {
   String get speechInsecure => '这个云端服务的地址不是 https，Key 不能这样发出去';
 
   @override
-  String starPromptTitle(int hours) {
-    String _temp0 = intl.Intl.pluralLogic(
-      hours,
-      locale: localeName,
-      other: '本鱼已经在 DSH Go 里陪你 $hours 个小时啦⁠~',
-      one: '本鱼已经在 DSH Go 里陪你一个小时啦⁠~',
-      zero: '本鱼已经在 DSH Go 里陪你半个小时啦⁠~',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get starPromptBody => '这是一个免费开源的项目，如果它让你的移动端体验更好了一点，拜托点个 Star 支持一下，这对本鱼是很大的鼓励！';
-
-  @override
-  String get starPromptPlea => '拜托你啦~ 这真的很重要！！';
-
-  @override
-  String get starPromptStar => '去 GitHub 点 Star';
-
-  @override
-  String get starPromptDone => '已经点过啦';
-
-  @override
-  String get starPromptLater => '下次再说';
-
-  @override
-  String get starSettingsTitle => '给 DSH Go 点个 star';
-
-  @override
   String get hubStartPage => '起始页';
 
   @override
@@ -22744,6 +22714,9 @@ class L10nZh extends L10n {
   String get tavernPackExportChanged => '导出的来源或选项变了，请重新预览';
 
   @override
+  String get starSettingsTitle => '给 DSH Go 点个 star';
+
+  @override
   String get updateCheck => '检查更新';
 
   @override
@@ -22986,9 +22959,6 @@ class L10nZh extends L10n {
 
   @override
   String get updateExportApkFailed => '没能导出安装包';
-
-  @override
-  String get updateStarProject => '去 Star';
 
   @override
   String get updateCancelDownload => '取消下载';

@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../l10n/l10n.dart';
-import '../../state/star_prompt.dart' show starPromptGateProvider, starPromptProvider;
 import '../../state/update_state.dart';
 import '../../update/release.dart' show releaseNotesFor;
 import '../../update/privileged_installer.dart';
@@ -18,7 +17,6 @@ import '../common/sheet_title_bar.dart';
 import '../settings/settings_widgets.dart' show SettingsSection;
 import '../phone/android_shell_page.dart';
 import '../shell/brand_mark.dart';
-import '../star/star_prompt_dialog.dart' show openStarProject;
 import '../theme/app_icons.dart';
 import '../theme/theme.dart';
 import '../common/brief_notice.dart';
@@ -582,48 +580,11 @@ class _UpdateSheetState extends ConsumerState<UpdateSheet> {
     }
     switch (update.task) {
       case UpdateTaskPhase.idle:
-        // Public builds also ask for a star here, until the star prompt is answered.
-        final askStar = ref.watch(starPromptGateProvider) && !ref.watch(starPromptProvider).finished;
-        void star() => unawaited(
-          openStarProject(ProviderScope.containerOf(context, listen: false), ScaffoldMessenger.maybeOf(context)),
-        );
-        const tight = EdgeInsets.symmetric(horizontal: 8);
         return Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (askStar)
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(minimumSize: _buttonSize, padding: tight),
-                      onPressed: close,
-                      child: Text(l10n.commonLater),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilledButton.tonalIcon(
-                      key: const ValueKey('update-star'),
-                      style: FilledButton.styleFrom(minimumSize: _buttonSize, padding: tight),
-                      onPressed: star,
-                      icon: const Icon(AppIcons.starProject, size: 18),
-                      label: Text(l10n.updateStarProject),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(minimumSize: _buttonSize, padding: tight),
-                      onPressed: () => unawaited(controller.startDownload()),
-                      child: Text(l10n.updateUpdateNow),
-                    ),
-                  ),
-                ],
-              )
-            else
-              pair(l10n.commonLater, close, l10n.updateUpdateNow, () => unawaited(controller.startDownload())),
+            pair(l10n.commonLater, close, l10n.updateUpdateNow, () => unawaited(controller.startDownload())),
             if (!update.isSkipped)
               TextButton(
                 onPressed: () {

@@ -1,0 +1,69 @@
+--- a/node_modules/@deepseek-ai/dsh-base/cordis.patch.yml
++++ b/node_modules/@deepseek-ai/dsh-base/cordis.patch.yml
+@@ -198,38 +198,6 @@
+       config:
+         writeEveryEvents: 200
+         writeIntervalMs: 5000
+-
+-    - id: otel
+-      name: '@deepseek-ai/dsh-otel'
+-
+-    # OTel releases a Session-log prefix only after explicit user feedback,
+-    # regardless of model provider. Ordinary activity never triggers capture.
+-    # DSH_TELEMETRY_OTLP_URL overrides the production endpoint. A non-empty
+-    # DSH_TELEMETRY_DISABLED — any value, including '0'/'false' — opts the
+-    # process out (the launchers patch the row disabled; config cannot disable
+-    # a row). Exports carry the harness home's anonymous user id ($DSH_HOME/.anonymous-user-id,
+-    # random UUID; delete the file to reset the identity) as the Resource's
+-    # user.id. Byte-bounded batching may turn an authorized prefix into
+-    # several HTTP requests. Requests run serially; each has its own 1s
+-    # transport timeout and 1.5s watchdog. A watchdog does not release the
+-    # active request slot. The outer 3s shutdown deadline stops queued sends;
+-    # large prefixes or an unsettled transport may leave records unsent.
+-    # Every CLI exit path drains by disposing the root on SIGINT/SIGTERM.
+-    - id: session-telemetry-otel
+-      name: '@deepseek-ai/dsh-session-telemetry-otel'
+-      config:
+-        mode: !!js process.env.DSH_TELEMETRY_MODE || 'FEEDBACK_ONLY'
+-        shutdownTimeoutMillis: 3000
+-        maxRequestBytes: 4000000
+-        exporter:
+-          url: !!js process.env.DSH_TELEMETRY_OTLP_URL ?? 'https://dsh-otel-collector.deepseeksvc.com/v1/logs'
+-          compression: gzip
+-          timeoutMillis: 1000
+-        processor:
+-          scheduledDelayMillis: 10000
+-          maxQueueSize: 2048
+-          maxExportBatchSize: 2048
+-          exportTimeoutMillis: 1500
+ 
+     - id: subprocess
+       name: '@deepseek-ai/dsh-subprocess-local'
+--- a/node_modules/@deepseek-ai/dsh-web-app/cordis.patch.yml
++++ b/node_modules/@deepseek-ai/dsh-web-app/cordis.patch.yml
+@@ -34,25 +34,6 @@
+ # `dsh.client` rows are the browser roster the modules node half scans into
+ # window.__DSH_BOOT__; the modules row is simultaneously a host row.
+ - insert:
+-    - id: desktop-product-telemetry
+-      name: '@deepseek-ai/dsh-host-product-telemetry-otel'
+-      disabled: !!js "ctx.get('profileContext')?.name !== 'desktop'"
+-      config:
+-        scheduledDelayMillis: 30000
+-        timeoutMillis: 15000
+-        exportTimeoutMillis: 20000
+-        shutdownTimeoutMillis: 2000
+-        serviceName: deepseek-harness-desktop
+-        serviceVersion: !!js process.env.DSH_CLIENT_VERSION
+-        endpoint: !!js process.env.DSH_PRODUCT_ANALYTICS_OTLP_URL
+-
+-    - id: product-analytics
+-      name: '@deepseek-ai/dsh-client-product-analytics'
+-      disabled: !!js "ctx.get('profileContext')?.name !== 'desktop'"
+-      config:
+-        enabled: true
+-        appVersion: !!js process.env.DSH_CLIENT_VERSION
+-
+     # Host-owned authorization sampled at Agent creation. The Plugins page
+     # edits this settings namespace independently of the selected preset.
+     - id: subagent-model-selection-settings

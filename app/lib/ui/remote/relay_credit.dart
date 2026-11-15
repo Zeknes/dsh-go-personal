@@ -13,7 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
 import '../../state/app_info.dart';
-import '../../state/star_prompt.dart' show starLinkOpenerProvider;
+import '../common/project_links.dart' show starLinkOpenerProvider;
 import '../settings/settings_widgets.dart';
 import '../theme/app_icons.dart';
 

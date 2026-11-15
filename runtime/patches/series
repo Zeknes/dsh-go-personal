@@ -149,3 +149,5 @@ fork-default-effort.diff
 config-editor-lock-order.diff
 piai-overflow-output-limit.diff
 personal-remove-telemetry.diff
+personal-remove-session-log.diff
+personal-remove-telemetry-registration.diff

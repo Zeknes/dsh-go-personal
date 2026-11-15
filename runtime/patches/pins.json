@@ -1889,6 +1889,26 @@
           "after": "11309571b41eac5c57246c222f725004804c009c9cdb1bcc019dd38e2eca5645"
         }
       }
+    },
+    "personal-remove-session-log.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-session-log-deepseek/lib/index.js": {
+          "before": "a4b5cc74b9bd9705e107ab4c8eb2395a5c580507e2b5fbd8eff09377f41ca0cf",
+          "after": "eb6a99acf94e02d5ffa2caa27dcc5da1e41d0c5ae5ca38c2f578ccc8ffd21a23"
+        }
+      }
+    },
+    "personal-remove-telemetry-registration.diff": {
+      "0.2.2-rc.1": {
+        "node_modules/@deepseek-ai/dsh-base/cordis.patch.yml": {
+          "before": "b65a86e55f02d863286bb6faac8ae292c18fffca3c8aa4491b600fa4dd6b48d0",
+          "after": "3b00690feaa5635db10102552f7d180fd8a9bc1f294e7beec6ca6d9a46248ce7"
+        },
+        "node_modules/@deepseek-ai/dsh-web-app/cordis.patch.yml": {
+          "before": "11c444b94936f8c645f49740b692fc8545898591f78af893d2cb1b7fed4c701c",
+          "after": "30abe375acd5c873f39a246d14ceaeca437f240e5ecfee486eb977ba91381386"
+        }
+      }
     }
   },
   "schema": 1

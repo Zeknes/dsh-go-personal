@@ -85,13 +85,6 @@ versionCode = (年 - 2026) × 10^8 + MMDDhhmm      时钟固定按 UTC+8
 
    脚本顺带传 `DSH_APP_VERSION=<版本名>+<构建号>`，它只影响诊断信息里的版本（`lib/state/app_info.dart` 是编译期常量）；更新检查读的是系统里真实的 versionName / versionCode，不依赖它。
 
-   **公测起**（GitHub Release 和公开渠道的包）打开求 star 提示，内测包不加：
-
-   ```sh
-   tooling/build-apk.sh -- --dart-define=DSH_STAR_PROMPT=true
-   ```
-
-   提示的触发条件见 `docs/design/star-prompt.md`；使用时长从装上这个包算起。
 3. **确认签名**：对要发布的 arm64 APK 执行 `apksigner verify -v --min-sdk-version 21 --print-certs`。v1、v2、v3 三种签名都要是 `true`（v1 给仍读 JAR 签名的安装器和安全扫描；不加 `--min-sdk-version` 时 apksigner 按 minSdk 26 不查 v1），证书主题不得含 `CN=Android Debug`，证书 SHA-256 必须与上一版一致。验证失败时不要生成或上传 `dist/`、`update.json`。
 4. **生成资产**（改名、算校验和、写 `update.json`）。默认只收录 arm64；版本名取 pubspec，构建号用 `aapt2` 从 APK 里读。版本名不匹配或构建号还是占位的 `1` 时脚本直接报错：
 

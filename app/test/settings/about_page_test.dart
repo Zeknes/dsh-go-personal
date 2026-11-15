@@ -1,7 +1,7 @@
 import 'dart:ui' show SemanticsAction;
 
 import 'package:dsh_app/l10n/l10n.dart';
-import 'package:dsh_app/state/star_prompt.dart';
+import 'package:dsh_app/ui/common/project_links.dart';
 import 'package:dsh_app/state/update_state.dart';
 import 'package:dsh_app/ui/settings/about_page.dart';
 import 'package:dsh_app/ui/settings/settings_widgets.dart';
@@ -19,16 +19,6 @@ class _FixedUpdate extends AppUpdateController {
   AppUpdateState build() => const AppUpdateState(current: AppVersion(1, 0, 2, build: 42));
 }
 
-class _StarStore implements StarPromptStore {
-  final writes = <StarPromptRecord>[];
-
-  @override
-  Future<StarPromptRecord?> read() async => const StarPromptRecord();
-
-  @override
-  Future<void> write(StarPromptRecord record) async => writes.add(record);
-}
-
 const _profiles = [
   ('about-author-bilibili', 'https://b23.tv/9WBns6Y'),
   ('about-author-x', 'https://x.com/cccch1mneyyyy'),
@@ -37,12 +27,10 @@ const _profiles = [
 
 void main() {
   late List<Uri> opened;
-  late _StarStore store;
   late Future<bool> Function(Uri) opener;
 
   setUp(() {
     opened = [];
-    store = _StarStore();
     opener = (uri) async {
       opened.add(uri);
       return true;
@@ -66,8 +54,6 @@ void main() {
         overrides: [
           appUpdateProvider.overrideWith(_FixedUpdate.new),
           starLinkOpenerProvider.overrideWithValue((uri) => opener(uri)),
-          starPromptStoreProvider.overrideWithValue(store),
-          starPromptGateProvider.overrideWithValue(false),
         ],
         child: MaterialApp(
           theme: withTestFonts(buildLightTheme()),
@@ -136,14 +122,12 @@ void main() {
       await tap(tester, key);
     }
     expect(opened.map((uri) => uri.toString()), _profiles.map((profile) => profile.$2));
-    expect(store.writes, isEmpty);
   });
 
   testWidgets('the separate project star still opens the repository', (tester) async {
     await pump(tester);
     await tap(tester, 'settings-star');
     expect(opened.map((uri) => uri.toString()), ['https://github.com/Zeknes/dsh-go-personal']);
-    expect(store.writes.last.finished, isTrue);
   });
 
   testWidgets('no browser copies the original B23 URL and reports it', (tester) async {
@@ -158,7 +142,6 @@ void main() {
     await tap(tester, 'about-author-bilibili');
     expect(clipboard, 'https://b23.tv/9WBns6Y');
     expect(find.text('没能打开浏览器，网址已复制'), findsOneWidget);
-    expect(store.writes, isEmpty);
   });
 
   testWidgets('browser and clipboard exceptions report failure without claiming a copy', (tester) async {

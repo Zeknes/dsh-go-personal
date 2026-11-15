@@ -1,4 +1,5 @@
 {
+  "starSettingsTitle": "Star DSH Go on GitHub",
   "updateCheck": "Check for updates",
   "updateAutoCheck": "Check automatically",
   "updateAutoCheckDaily": "Once a day",
@@ -74,7 +75,6 @@
   "updateExportApkMessage": "Copies the package downloaded and verified now into Downloads/DSH-Go, so you can sign it yourself (MT Manager and the like) and install that.\n\nA package you signed has a different signature from ours: in-app updates then always report a signature mismatch, and every later version has to be signed and installed by hand.\n\nIf the system simply blocks the install (Xiaomi and other vendors), try Shizuku or on-device ADB under Installation route first; that needs no signing.",
   "updateExportApkDone": "Saved to Downloads/{path}",
   "updateExportApkFailed": "Couldn't save the package",
-  "updateStarProject": "Star it",
   "updateCancelDownload": "Cancel download",
   "updateDownloadInBackground": "Download in background",
   "updateVerifying": "Verifying…",

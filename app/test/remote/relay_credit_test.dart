@@ -7,7 +7,7 @@ import 'package:dsh_app/remote/secret_store.dart';
 import 'package:dsh_app/runtime/runtime_state.dart';
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/hosts_state.dart';
-import 'package:dsh_app/state/star_prompt.dart' show starLinkOpenerProvider;
+import 'package:dsh_app/ui/common/project_links.dart' show starLinkOpenerProvider;
 import 'package:dsh_app/ui/common/app_sheet.dart' show SheetGroup;
 import 'package:dsh_app/ui/remote/relay_credit.dart';
 import 'package:dsh_app/ui/remote/remote_screen.dart';

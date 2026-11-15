@@ -32528,48 +32528,6 @@ abstract class L10n {
   /// **'这个云端服务的地址不是 https，Key 不能这样发出去'**
   String get speechInsecure;
 
-  /// The star prompt's first line. hours is the whole hours of use so far, rounded down; 0 is half an hour (the first ask comes after 30 minutes). The word joiner keeps the ~ on the line of the word before it.
-  ///
-  /// In zh, this message translates to:
-  /// **'{hours, plural, =0{本鱼已经在 DSH Go 里陪你半个小时啦⁠~} =1{本鱼已经在 DSH Go 里陪你一个小时啦⁠~} other{本鱼已经在 DSH Go 里陪你 {hours} 个小时啦⁠~}}'**
-  String starPromptTitle(int hours);
-
-  /// No description provided for @starPromptBody.
-  ///
-  /// In zh, this message translates to:
-  /// **'这是一个免费开源的项目，如果它让你的移动端体验更好了一点，拜托点个 Star 支持一下，这对本鱼是很大的鼓励！'**
-  String get starPromptBody;
-
-  /// No description provided for @starPromptPlea.
-  ///
-  /// In zh, this message translates to:
-  /// **'拜托你啦~ 这真的很重要！！'**
-  String get starPromptPlea;
-
-  /// No description provided for @starPromptStar.
-  ///
-  /// In zh, this message translates to:
-  /// **'去 GitHub 点 Star'**
-  String get starPromptStar;
-
-  /// No description provided for @starPromptDone.
-  ///
-  /// In zh, this message translates to:
-  /// **'已经点过啦'**
-  String get starPromptDone;
-
-  /// No description provided for @starPromptLater.
-  ///
-  /// In zh, this message translates to:
-  /// **'下次再说'**
-  String get starPromptLater;
-
-  /// No description provided for @starSettingsTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'给 DSH Go 点个 star'**
-  String get starSettingsTitle;
-
   /// No description provided for @hubStartPage.
   ///
   /// In zh, this message translates to:
@@ -41564,6 +41522,12 @@ abstract class L10n {
   /// **'导出的来源或选项变了，请重新预览'**
   String get tavernPackExportChanged;
 
+  /// No description provided for @starSettingsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'给 DSH Go 点个 star'**
+  String get starSettingsTitle;
+
   /// No description provided for @updateCheck.
   ///
   /// In zh, this message translates to:
@@ -42013,12 +41977,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'没能导出安装包'**
   String get updateExportApkFailed;
-
-  /// No description provided for @updateStarProject.
-  ///
-  /// In zh, this message translates to:
-  /// **'去 Star'**
-  String get updateStarProject;
 
   /// No description provided for @updateCancelDownload.
   ///
