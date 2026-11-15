@@ -120,11 +120,11 @@ class PerformancePrefsController extends Notifier<PerformancePrefs> {
       final prefs = await SharedPreferences.getInstance();
       if (!ref.mounted) return;
       state = PerformancePrefs(
-        mode: PerformanceMode.values.asNameMap()[prefs.getString(modeKey)] ?? PerformanceMode.auto,
+        mode: PerformanceMode.values.asNameMap()[prefs.getString(modeKey)] ?? PerformanceMode.full,
         blur: prefs.getBool(blurKey),
         animations: prefs.getBool(animationsKey),
         fluid: prefs.getBool(fluidKey),
-        refreshRate: RefreshRateMode.values.asNameMap()[prefs.getString(refreshRateKey)] ?? RefreshRateMode.auto,
+        refreshRate: RefreshRateMode.values.asNameMap()[prefs.getString(refreshRateKey)] ?? RefreshRateMode.max,
         loaded: true,
       );
     } catch (_) {

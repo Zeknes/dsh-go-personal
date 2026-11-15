@@ -57,11 +57,11 @@ enum RefreshRateMode {
 /// Null per-feature values mean "use the current profile". Defaults are never persisted.
 class PerformancePrefs {
   const PerformancePrefs({
-    this.mode = PerformanceMode.auto,
+    this.mode = PerformanceMode.full,
     this.blur,
     this.animations,
     this.fluid,
-    this.refreshRate = RefreshRateMode.auto,
+    this.refreshRate = RefreshRateMode.max,
     this.loaded = false,
   });
 

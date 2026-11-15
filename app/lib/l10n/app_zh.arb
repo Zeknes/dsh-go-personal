@@ -6100,7 +6100,7 @@
   "performanceAutoHint": "按设备调整默认效果",
   "performanceFullHint": "保留模糊与动效",
   "performanceLightHint": "减少常驻效果和资源占用",
-  "performanceChoiceHint": "手动选择的宠物和引擎设置优先",
+  "performanceChoiceHint": "手动选择的引擎设置优先",
   "performanceCooling": "正在减少效果，降温后恢复",
   "performanceEffects": "界面效果",
   "performanceBlur": "玻璃模糊",

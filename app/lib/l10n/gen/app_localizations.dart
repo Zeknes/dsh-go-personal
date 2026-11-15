@@ -18437,7 +18437,7 @@ abstract class L10n {
   /// No description provided for @performanceChoiceHint.
   ///
   /// In zh, this message translates to:
-  /// **'手动选择的宠物和引擎设置优先'**
+  /// **'手动选择的引擎设置优先'**
   String get performanceChoiceHint;
 
   /// No description provided for @performanceCooling.

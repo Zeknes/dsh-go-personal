@@ -122,6 +122,7 @@ void main() {
   });
 
   testWidgets('light defaults drive both theme blur and the existing motion path', (tester) async {
+    SharedPreferences.setMockInitialValues({'performance.mode': 'auto'});
     window(tester);
     const body = SizedBox(key: ValueKey('policy-probe'));
     final c = await mount(tester, body, tier: DeviceTier.low);
@@ -331,6 +332,7 @@ void main() {
     });
 
     testWidgets('a low device starts without it, and its switch comes with animations', (tester) async {
+      SharedPreferences.setMockInitialValues({'performance.mode': 'auto'});
       window(tester);
       final c = await mount(tester, const PerformancePage(), tier: DeviceTier.low);
       await tester.pumpAndSettle();

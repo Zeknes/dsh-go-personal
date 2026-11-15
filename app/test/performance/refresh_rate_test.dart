@@ -34,11 +34,11 @@ void main() {
     expect((await SharedPreferences.getInstance()).getString('performance.refresh_rate'), 'max');
   });
 
-  test('the default is auto, and old installs read as auto', () async {
+  test('the default is max when no choice is saved', () async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     await waitLoaded(container);
-    expect(container.read(performancePrefsProvider).refreshRate, RefreshRateMode.auto);
+    expect(container.read(performancePrefsProvider).refreshRate, RefreshRateMode.max);
   });
 
   test('mode changes reach the platform once', () async {

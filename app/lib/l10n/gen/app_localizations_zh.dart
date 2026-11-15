@@ -9980,7 +9980,7 @@ class L10nZh extends L10n {
   String get performanceLightHint => '减少常驻效果和资源占用';
 
   @override
-  String get performanceChoiceHint => '手动选择的宠物和引擎设置优先';
+  String get performanceChoiceHint => '手动选择的引擎设置优先';
 
   @override
   String get performanceCooling => '正在减少效果，降温后恢复';

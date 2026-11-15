@@ -10507,7 +10507,7 @@ class L10nEn extends L10n {
   String get performanceLightHint => 'Reduce ongoing effects and resource use';
 
   @override
-  String get performanceChoiceHint => 'Your pet and engine choices take priority';
+  String get performanceChoiceHint => 'Your engine choices take priority';
 
   @override
   String get performanceCooling => 'Reducing effects until the device cools';

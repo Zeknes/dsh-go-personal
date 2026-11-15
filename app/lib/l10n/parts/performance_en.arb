@@ -6,7 +6,7 @@
   "performanceAutoHint": "Adjust default effects for this device",
   "performanceFullHint": "Keep blur and animation",
   "performanceLightHint": "Reduce ongoing effects and resource use",
-  "performanceChoiceHint": "Your pet and engine choices take priority",
+  "performanceChoiceHint": "Your engine choices take priority",
   "performanceCooling": "Reducing effects until the device cools",
   "performanceEffects": "Interface effects",
   "performanceBlur": "Glass blur",

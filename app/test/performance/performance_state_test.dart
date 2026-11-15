@@ -23,7 +23,7 @@ void main() {
   group('documented defaults', () {
     for (final tier in DeviceTier.values) {
       test('${tier.name} selects the expected automatic defaults', () {
-        final policy = PerformanceDefaults.resolve(snapshot(tier), const PerformancePrefs());
+        final policy = PerformanceDefaults.resolve(snapshot(tier), const PerformancePrefs(mode: PerformanceMode.auto));
         final full = tier != DeviceTier.low;
         expect(policy.blur, full);
         expect(policy.reduceMotion, !full);
@@ -87,6 +87,25 @@ void main() {
       });
     }
 
+    test('new installations use full effects and maximum refresh without writing preferences', () async {
+      start();
+      await container.read(performancePrefsProvider.notifier).ready;
+      final prefs = container.read(performancePrefsProvider);
+      expect(prefs.mode, PerformanceMode.full);
+      expect(prefs.refreshRate, RefreshRateMode.max);
+      final stored = await SharedPreferences.getInstance();
+      expect(stored.containsKey('performance.mode'), isFalse);
+      expect(stored.containsKey('performance.refresh_rate'), isFalse);
+    });
+
+    test('saved performance and refresh choices are retained', () async {
+      SharedPreferences.setMockInitialValues({'performance.mode': 'light', 'performance.refresh_rate': 'system'});
+      start();
+      await container.read(performancePrefsProvider.notifier).ready;
+      expect(container.read(performancePrefsProvider).mode, PerformanceMode.light);
+      expect(container.read(performancePrefsProvider).refreshRate, RefreshRateMode.system);
+    });
+
     test('hardware Enter preference defaults off, persists, and reloads', () async {
       start();
       await loaded(container);
@@ -101,6 +120,7 @@ void main() {
     });
 
     test('low device defaults do not create user preference keys', () async {
+      SharedPreferences.setMockInitialValues({'performance.mode': 'auto'});
       start();
       await loaded(container);
       expect(container.read(settingsProvider).autoStartLocal, isFalse);
@@ -158,6 +178,7 @@ void main() {
     });
 
     test('startup settings remain loading while device facts are pending', () async {
+      SharedPreferences.setMockInitialValues({'performance.mode': 'auto'});
       final pending = Completer<PerformanceSnapshot>();
       start(initial: pending.future);
       container.read(settingsProvider);
@@ -242,7 +263,7 @@ void main() {
     });
 
     test('fluid motion: a choice sticks, resets, and always gives way to no animations', () async {
-      SharedPreferences.setMockInitialValues({'performance.fluid': true});
+      SharedPreferences.setMockInitialValues({'performance.mode': 'auto', 'performance.fluid': true});
       start();
       await loaded(container);
       final prefs = container.read(performancePrefsProvider.notifier);
