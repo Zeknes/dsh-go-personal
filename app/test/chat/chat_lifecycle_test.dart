@@ -16,6 +16,10 @@ import 'support/harness.dart';
 class _Mux extends DshMux {
   _Mux(super.carrier);
   final connection = StreamController<DshConnectionState>.broadcast();
+  DshConnectionState current = DshConnectionState.connected;
+
+  @override
+  DshConnectionState get state => current;
 
   @override
   Stream<DshConnectionState> get states => connection.stream;
@@ -235,6 +239,44 @@ void main() {
     second.watches.single.add(_snapshot('新内容'));
     await tester.pump(const Duration(milliseconds: 40));
     expect(sub.read().items.whereType<UserChatItem>().single.text, '新内容');
+    sub.close();
+    container.dispose();
+  });
+
+  testWidgets('replacement client snapshot does not retain old closed transport state', (tester) async {
+    final first = _Client();
+    final second = _Client();
+    final container = _container(first);
+    final sub = container.listen(chatProvider('a'), (_, _) {});
+    first.watches.single.add(_snapshot('old'));
+    first.watches.single.add(const ConnectionStateEvent(DshConnectionState.closed));
+    await tester.pump(const Duration(milliseconds: 40));
+    expect(sub.read().connection, DshConnectionState.closed);
+    container.updateOverrides([activeConnectionProvider.overrideWithValue(const AsyncData<HostConnection?>(null))]);
+    await tester.pump();
+    expect(sub.read().syncing, isTrue);
+    container.updateOverrides([
+      activeConnectionProvider.overrideWithValue(AsyncData(HostConnection(client: second, label: '本机', isLocal: true))),
+    ]);
+    await tester.pump();
+    expect(sub.read().syncing, isTrue);
+    second.watches.single.add(_snapshot('new'));
+    await tester.pump(const Duration(milliseconds: 40));
+    expect(sub.read().syncing, isFalse);
+    expect(sub.read().connection, DshConnectionState.connected);
+    // Late old events cannot change the new client's status.
+    first.mux.connection.add(DshConnectionState.closed);
+    await tester.pump();
+    expect(sub.read().connection, DshConnectionState.connected);
+    // A real current-client closure remains visible after a snapshot.
+    second.mux.current = DshConnectionState.closed;
+    second.watches.single.add(const ConnectionStateEvent(DshConnectionState.closed));
+    await tester.pump(const Duration(milliseconds: 40));
+    expect(sub.read().connection, DshConnectionState.closed);
+    second.mux.current = DshConnectionState.connected;
+    second.watches.single.add(const ConnectionStateEvent(DshConnectionState.connected));
+    await tester.pump(const Duration(milliseconds: 40));
+    expect(sub.read().connection, DshConnectionState.connected);
     sub.close();
     container.dispose();
   });

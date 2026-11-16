@@ -896,6 +896,11 @@ class ChatController extends Notifier<ChatState> {
               // A replacement transcript may have the same sequence bounds.
               _lookupKey = null;
               _snapshotGeneration = client.mux.generation;
+              // The retained transcript may belong to an old client whose
+              // terminal state was closed. A new watch does not replay the
+              // mux's current state, so adopt the current client's state with
+              // its baseline instead of carrying that old state forward.
+              _transcript.connectionState = client.mux.state;
               _synchronized = true;
               // One publication: no ready state containing the old inbox.
               _publish(freshSnapshot: true);
