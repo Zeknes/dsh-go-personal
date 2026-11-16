@@ -1,0 +1,1148 @@
+--- a/node_modules/@deepseek-ai/dsh-client-ui-tool/lib/client.js
++++ b/node_modules/@deepseek-ai/dsh-client-ui-tool/lib/client.js
+@@ -3945,15 +3945,15 @@
+ 		function goalDetail(value, t) {
+ 			if (!detailRecord(value)) return null;
+ 			if (value.goal === null) return {
+ 				items: [],
+ 				empty: t("detail.goal.empty")
+ 			};
+ 			const goal = value.goal;
+-			if (!detailRecord(goal) || !nonempty(goal.id) || !nonempty(goal.objective) || !count(goal.revision) || !count(goal.roundsStarted) || !count(goal.maxGoalRounds)) return null;
++			if (!detailRecord(goal) || !nonempty(goal.id) || !nonempty(goal.objective) || !count(goal.revision) || !count(goal.roundsStarted) || goal.maxGoalRounds !== "unlimited" && !count(goal.maxGoalRounds)) return null;
+ 			const phase = goal.phase;
+ 			if (phase !== "active" && phase !== "paused" && phase !== "blocked" && phase !== "complete") return null;
+ 			if (value.activation !== "armed" && value.activation !== "disarmed") return null;
+ 			const fields = [{
+ 				label: t("detail.state"),
+ 				value: t(phase === "active" && value.activation === "disarmed" ? "detail.goal.disarmed" : `detail.goal.${phase}`)
+ 			}, {
+--- a/node_modules/@deepseek-ai/dsh-goal/lib/index.js
++++ b/node_modules/@deepseek-ai/dsh-goal/lib/index.js
+@@ -93,15 +93,15 @@
+ 	const expectedKeys = phase === "blocked" ? "blockedReason,id,maxGoalRounds,objective,phase,revision" : "id,maxGoalRounds,objective,phase,revision";
+ 	if (Object.keys(value).sort().join(",") !== expectedKeys) throw new Error(`goal change goal for phase ${phase} must have exactly ${expectedKeys} fields`);
+ 	return {
+ 		id: GoalId(value["id"]),
+ 		revision: positiveInteger(value["revision"], "goal.revision"),
+ 		objective: value["objective"],
+ 		phase,
+-		maxGoalRounds: positiveInteger(value["maxGoalRounds"], "goal.maxGoalRounds"),
++		maxGoalRounds: value["maxGoalRounds"] === "unlimited" ? "unlimited" : positiveInteger(value["maxGoalRounds"], "goal.maxGoalRounds"),
+ 		...phase === "blocked" ? { blockedReason: decodeBlockReason(value["blockedReason"]) } : {}
+ 	};
+ }
+ /** Decode and validate one ref. */
+ function decodeRef(value) {
+ 	if (!isRecord(value) || Object.keys(value).sort().join(",") !== "id,revision") throw new Error("goal clear tombstone must have exactly id and revision fields");
+ 	if (typeof value["id"] !== "string" || value["id"].length === 0) throw new Error("goal clear tombstone id must be a non-empty string");
+@@ -191,15 +191,15 @@
+ 			break;
+ 		case "resume":
+ 			requireSameDefinition(current, next, change.operation);
+ 			if (!new Set([
+ 				"active",
+ 				"paused",
+ 				"blocked"
+-			]).has(current.phase) || next.phase !== "active" || state.roundsStarted >= next.maxGoalRounds) throw new Error("goal resume has an invalid phase transition or exhausted round budget");
++			]).has(current.phase) || next.phase !== "active" || next.maxGoalRounds !== "unlimited" && state.roundsStarted >= next.maxGoalRounds) throw new Error("goal resume has an invalid phase transition or exhausted round budget");
+ 			break;
+ 		case "complete":
+ 			requireSameDefinition(current, next, change.operation);
+ 			if (current.phase === "complete" || next.phase !== "complete") throw new Error("goal complete has an invalid phase transition");
+ 			break;
+ 		case "block":
+ 			requireSameDefinition(current, next, change.operation);
+@@ -271,15 +271,15 @@
+ 		applyGoalChange(state, change);
+ 		return;
+ 	}
+ 	if (event.type === "user/message") {
+ 		const source = goalSource(event.data.source);
+ 		if (source === void 0) return;
+ 		const current = state.goal;
+-		if (current === void 0 || current.phase !== "active" || source.goalId !== current.id || source.revision !== current.revision || source.round !== state.roundsStarted + 1 || source.round > current.maxGoalRounds) throw new Error(`goal round at session event ${event.seq} is not the next admitted round of the active goal`);
++		if (current === void 0 || current.phase !== "active" || source.goalId !== current.id || source.revision !== current.revision || source.round !== state.roundsStarted + 1 || current.maxGoalRounds !== "unlimited" && source.round > current.maxGoalRounds) throw new Error(`goal round at session event ${event.seq} is not the next admitted round of the active goal`);
+ 		state.roundsStarted = source.round;
+ 	}
+ }
+ /**
+ * Fold current goal state from a contiguous session event log.
+ * @param events - session events in sequence order.
+ * @returns a fresh durable projection; activation is deliberately absent.
+@@ -352,15 +352,15 @@
+ 			z$1.literal("blocked"),
+ 			z$1.literal("complete")
+ 		]),
+ 		blockedReason: z$1.object({
+ 			code: z$1.string(),
+ 			message: z$1.string()
+ 		}).optional(),
+-		maxGoalRounds: z$1.number().int().positive()
++		maxGoalRounds: z$1.union([z$1.number().int().positive(), z$1.literal("unlimited")])
+ 	}),
+ 	roundsStarted: z$1.number().int().nonnegative(),
+ 	createdAt: z$1.number(),
+ 	updatedAt: z$1.number()
+ }), z$1.null()]);
+ const goalProjectionStateSchema = z$1.object({
+ 	current: goalProjectionSchema,
+@@ -372,15 +372,15 @@
+ 		code: "custom",
+ 		message: "current goal id must be retained among seen goal ids"
+ 	});
+ 	if (state.current.updatedAt < state.current.createdAt) context.addIssue({
+ 		code: "custom",
+ 		message: "current goal update cannot precede its creation"
+ 	});
+-	if (state.current.roundsStarted > state.current.goal.maxGoalRounds) context.addIssue({
++	if (state.current.goal.maxGoalRounds !== "unlimited" && state.current.roundsStarted > state.current.goal.maxGoalRounds) context.addIssue({
+ 		code: "custom",
+ 		message: "current goal rounds cannot exceed its configured limit"
+ 	});
+ });
+ /** Build strict fold state from one checkpoint-safe projection state. */
+ function goalFoldState(state) {
+ 	return {
+@@ -446,19 +446,20 @@
+ 		failure: null
+ 	}),
+ 	apply: applyGoalProjection,
+ 	wire: {
+ 		viewSchema: goalProjectionSchema,
+ 		view: (state) => state.current
+ 	},
+-	stateVersion: 6
++	stateVersion: 7
+ };
+ /** Validate a caller-visible positive safe-integer round cap. */
+ function resolveMaxGoalRounds(value) {
+-	if (!Number.isSafeInteger(value) || value < 1) throw new GoalError("maxGoalRounds must be a positive safe integer", "GOAL_INVALID_MAX_ROUNDS");
++	if (value === "unlimited") return value;
++	if (!Number.isSafeInteger(value) || value < 1) throw new GoalError("maxGoalRounds must be a positive safe integer or unlimited", "GOAL_INVALID_MAX_ROUNDS");
+ 	return value;
+ }
+ /** Validate and normalize an objective at the domain boundary. */
+ function resolveObjective(value) {
+ 	if (typeof value !== "string" || value.trim().length === 0) throw new GoalError("goal objective must be a non-empty string", "GOAL_INVALID_OBJECTIVE");
+ 	return value.trim();
+ }
+@@ -582,15 +583,15 @@
+ 				enumerable: true,
+ 				configurable: true,
+ 				writable: true,
+ 				value: _metadata
+ 			});
+ 		}
+ 		static inject = ["agents", "sessionProjections"];
+-		static Config = z.object({ defaultMaxGoalRounds: z.number().default(256) });
++		static Config = z.object({ defaultMaxGoalRounds: z.union([z.number(), z.const("unlimited")]).default(256) });
+ 		resolved = __runInitializers(this, _instanceExtraInitializers);
+ 		runtimeStates = /* @__PURE__ */ new WeakMap();
+ 		goalProjectionHandle;
+ 		constructor(ctx, config = {}) {
+ 			super(ctx, "goals");
+ 			this.resolved = { defaultMaxGoalRounds: resolveMaxGoalRounds(config.defaultMaxGoalRounds ?? 256) };
+ 		}
+@@ -695,15 +696,15 @@
+ 			const resumable = [
+ 				"active",
+ 				"paused",
+ 				"blocked"
+ 			];
+ 			if (!resumable.includes(current.phase)) throw this.transitionError(current, "resume", resumable);
+ 			if (current.phase === "active" && runtime.activation === "armed") throw new GoalError(`goal "${current.id}" is already active and armed`, "GOAL_INVALID_TRANSITION");
+-			if (currentState.roundsStarted >= current.maxGoalRounds) throw new GoalError(`goal "${current.id}" exhausted ${current.maxGoalRounds} goal rounds; increase maxGoalRounds before resuming`, "GOAL_INVALID_TRANSITION");
++			if (current.maxGoalRounds !== "unlimited" && currentState.roundsStarted >= current.maxGoalRounds) throw new GoalError(`goal "${current.id}" exhausted ${current.maxGoalRounds} goal rounds; increase maxGoalRounds before resuming`, "GOAL_INVALID_TRANSITION");
+ 			return this.commitCurrent(agent, currentState, runtime, "resume", this.withPhase(current, "active"), "armed");
+ 		}
+ 		/**
+ 		* Mark a current non-complete goal complete and disarm it.
+ 		* @param agent - owning live agent.
+ 		* @param ref - expected current revision.
+ 		* @returns the completed view.
+--- a/node_modules/@deepseek-ai/dsh-goal/lib/typert.host.js
++++ b/node_modules/@deepseek-ai/dsh-goal/lib/typert.host.js
+@@ -30,24 +30,24 @@
+   'activation': z.union([z.literal("armed"), z.literal("disarmed")]).readonly().describe('Process-local continuation eligibility; never persisted.'),
+   'objective': z.string().readonly().describe('Human-requested completion objective.'),
+   'phase': z.union([z.literal("active"), z.literal("paused"), z.literal("blocked"), z.literal("complete")]).readonly().describe('Durable lifecycle phase.'),
+   'blockedReason': z.object({
+   'code': z.string().readonly().describe('Stable lower-kebab-case classification chosen by the blocking policy.'),
+   'message': z.string().readonly().describe('Non-empty explanation shown to humans and models.'),
+ }).readonly().optional().describe('Present exactly while `phase` is `blocked`.'),
+-  'maxGoalRounds': z.number().readonly().describe('Total admitted goal-round cap.'),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().describe('Total admitted goal-round cap, or unlimited for no round cap.'),
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }))
+ let _deepseek_ai_dsh_goal_goals_create_parameter_0$schema$value
+ const _deepseek_ai_dsh_goal_goals_create_parameter_0$schema = () => (_deepseek_ai_dsh_goal_goals_create_parameter_0$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_create_parameter_1$schema$value
+ const _deepseek_ai_dsh_goal_goals_create_parameter_1$schema = () => (_deepseek_ai_dsh_goal_goals_create_parameter_1$schema$value ??= z.object({
+   'objective': z.string().readonly(),
+-  'maxGoalRounds': z.number().readonly().optional(),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().optional(),
+ }))
+ let _deepseek_ai_dsh_goal_goals_create_result$schema$value
+ const _deepseek_ai_dsh_goal_goals_create_result$schema = () => (_deepseek_ai_dsh_goal_goals_create_result$schema$value ??= z.object({
+   'ref': z.object({
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }).readonly(),
+@@ -58,29 +58,29 @@
+ const _deepseek_ai_dsh_goal_goals_edit_parameter_1$schema = () => (_deepseek_ai_dsh_goal_goals_edit_parameter_1$schema$value ??= z.object({
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }))
+ let _deepseek_ai_dsh_goal_goals_edit_parameter_2$schema$value
+ const _deepseek_ai_dsh_goal_goals_edit_parameter_2$schema = () => (_deepseek_ai_dsh_goal_goals_edit_parameter_2$schema$value ??= z.object({
+   'objective': z.string().readonly().optional(),
+-  'maxGoalRounds': z.number().readonly().optional(),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().optional(),
+ }))
+ let _deepseek_ai_dsh_goal_goals_edit_result$schema$value
+ const _deepseek_ai_dsh_goal_goals_edit_result$schema = () => (_deepseek_ai_dsh_goal_goals_edit_result$schema$value ??= z.object({
+   'roundsStarted': z.number().readonly().describe('Highest admitted round number for this goal.'),
+   'createdAt': z.number().readonly().describe('Epoch milliseconds of the create mutation.'),
+   'updatedAt': z.number().readonly().describe('Epoch milliseconds of the latest mutation.'),
+   'activation': z.union([z.literal("armed"), z.literal("disarmed")]).readonly().describe('Process-local continuation eligibility; never persisted.'),
+   'objective': z.string().readonly().describe('Human-requested completion objective.'),
+   'phase': z.union([z.literal("active"), z.literal("paused"), z.literal("blocked"), z.literal("complete")]).readonly().describe('Durable lifecycle phase.'),
+   'blockedReason': z.object({
+   'code': z.string().readonly().describe('Stable lower-kebab-case classification chosen by the blocking policy.'),
+   'message': z.string().readonly().describe('Non-empty explanation shown to humans and models.'),
+ }).readonly().optional().describe('Present exactly while `phase` is `blocked`.'),
+-  'maxGoalRounds': z.number().readonly().describe('Total admitted goal-round cap.'),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().describe('Total admitted goal-round cap, or unlimited for no round cap.'),
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }))
+ let _deepseek_ai_dsh_goal_goals_get_parameter_0$schema$value
+ const _deepseek_ai_dsh_goal_goals_get_parameter_0$schema = () => (_deepseek_ai_dsh_goal_goals_get_parameter_0$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_get_result$schema$value
+ const _deepseek_ai_dsh_goal_goals_get_result$schema = () => (_deepseek_ai_dsh_goal_goals_get_result$schema$value ??= z.union([z.undefined(), z.object({
+@@ -90,15 +90,15 @@
+   'activation': z.union([z.literal("armed"), z.literal("disarmed")]).readonly().describe('Process-local continuation eligibility; never persisted.'),
+   'objective': z.string().readonly().describe('Human-requested completion objective.'),
+   'phase': z.union([z.literal("active"), z.literal("paused"), z.literal("blocked"), z.literal("complete")]).readonly().describe('Durable lifecycle phase.'),
+   'blockedReason': z.object({
+   'code': z.string().readonly().describe('Stable lower-kebab-case classification chosen by the blocking policy.'),
+   'message': z.string().readonly().describe('Non-empty explanation shown to humans and models.'),
+ }).readonly().optional().describe('Present exactly while `phase` is `blocked`.'),
+-  'maxGoalRounds': z.number().readonly().describe('Total admitted goal-round cap.'),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().describe('Total admitted goal-round cap, or unlimited for no round cap.'),
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ })]))
+ let _deepseek_ai_dsh_goal_goals_pause_parameter_0$schema$value
+ const _deepseek_ai_dsh_goal_goals_pause_parameter_0$schema = () => (_deepseek_ai_dsh_goal_goals_pause_parameter_0$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_pause_parameter_1$schema$value
+ const _deepseek_ai_dsh_goal_goals_pause_parameter_1$schema = () => (_deepseek_ai_dsh_goal_goals_pause_parameter_1$schema$value ??= z.object({
+@@ -113,15 +113,15 @@
+   'activation': z.union([z.literal("armed"), z.literal("disarmed")]).readonly().describe('Process-local continuation eligibility; never persisted.'),
+   'objective': z.string().readonly().describe('Human-requested completion objective.'),
+   'phase': z.union([z.literal("active"), z.literal("paused"), z.literal("blocked"), z.literal("complete")]).readonly().describe('Durable lifecycle phase.'),
+   'blockedReason': z.object({
+   'code': z.string().readonly().describe('Stable lower-kebab-case classification chosen by the blocking policy.'),
+   'message': z.string().readonly().describe('Non-empty explanation shown to humans and models.'),
+ }).readonly().optional().describe('Present exactly while `phase` is `blocked`.'),
+-  'maxGoalRounds': z.number().readonly().describe('Total admitted goal-round cap.'),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().describe('Total admitted goal-round cap, or unlimited for no round cap.'),
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }))
+ let _deepseek_ai_dsh_goal_goals_resume_parameter_0$schema$value
+ const _deepseek_ai_dsh_goal_goals_resume_parameter_0$schema = () => (_deepseek_ai_dsh_goal_goals_resume_parameter_0$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_resume_parameter_1$schema$value
+ const _deepseek_ai_dsh_goal_goals_resume_parameter_1$schema = () => (_deepseek_ai_dsh_goal_goals_resume_parameter_1$schema$value ??= z.object({
+@@ -136,15 +136,15 @@
+   'activation': z.union([z.literal("armed"), z.literal("disarmed")]).readonly().describe('Process-local continuation eligibility; never persisted.'),
+   'objective': z.string().readonly().describe('Human-requested completion objective.'),
+   'phase': z.union([z.literal("active"), z.literal("paused"), z.literal("blocked"), z.literal("complete")]).readonly().describe('Durable lifecycle phase.'),
+   'blockedReason': z.object({
+   'code': z.string().readonly().describe('Stable lower-kebab-case classification chosen by the blocking policy.'),
+   'message': z.string().readonly().describe('Non-empty explanation shown to humans and models.'),
+ }).readonly().optional().describe('Present exactly while `phase` is `blocked`.'),
+-  'maxGoalRounds': z.number().readonly().describe('Total admitted goal-round cap.'),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().describe('Total admitted goal-round cap, or unlimited for no round cap.'),
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }))
+ let _deepseek_ai_dsh_goal_goals_clear_parameter_0_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_clear_parameter_0_strict$schema = () => (_deepseek_ai_dsh_goal_goals_clear_parameter_0_strict$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_clear_parameter_1_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_clear_parameter_1_strict$schema = () => (_deepseek_ai_dsh_goal_goals_clear_parameter_1_strict$schema$value ??= z.strictObject({
+@@ -159,27 +159,27 @@
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }))
+ let _deepseek_ai_dsh_goal_goals_create_parameter_0_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_create_parameter_0_strict$schema = () => (_deepseek_ai_dsh_goal_goals_create_parameter_0_strict$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_create_parameter_1_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_create_parameter_1_strict$schema = () => (_deepseek_ai_dsh_goal_goals_create_parameter_1_strict$schema$value ??= z.strictObject({
+   'objective': z.string().readonly(),
+-  'maxGoalRounds': z.number().readonly().optional(),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().optional(),
+ }))
+ let _deepseek_ai_dsh_goal_goals_edit_parameter_0_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_edit_parameter_0_strict$schema = () => (_deepseek_ai_dsh_goal_goals_edit_parameter_0_strict$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_edit_parameter_1_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_edit_parameter_1_strict$schema = () => (_deepseek_ai_dsh_goal_goals_edit_parameter_1_strict$schema$value ??= z.strictObject({
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }))
+ let _deepseek_ai_dsh_goal_goals_edit_parameter_2_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_edit_parameter_2_strict$schema = () => (_deepseek_ai_dsh_goal_goals_edit_parameter_2_strict$schema$value ??= z.strictObject({
+   'objective': z.string().readonly().optional(),
+-  'maxGoalRounds': z.number().readonly().optional(),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().optional(),
+ }))
+ let _deepseek_ai_dsh_goal_goals_get_parameter_0_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_get_parameter_0_strict$schema = () => (_deepseek_ai_dsh_goal_goals_get_parameter_0_strict$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_pause_parameter_0_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_pause_parameter_0_strict$schema = () => (_deepseek_ai_dsh_goal_goals_pause_parameter_0_strict$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_pause_parameter_1_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_pause_parameter_1_strict$schema = () => (_deepseek_ai_dsh_goal_goals_pause_parameter_1_strict$schema$value ??= z.strictObject({
+@@ -246,15 +246,15 @@
+       result: {
+         mode: 'strict',
+         typeSymbol: '@deepseek-ai/dsh-goal/client#GoalRef',
+         create: _deepseek_ai_dsh_goal_goals_clear_result$schema,
+         description: 'the tombstone ref whose revision is one past the cleared snapshot.',
+         jsonSchema: {"type":"object","properties":{"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["id","revision"],"additionalProperties":true},
+       },
+-      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":435,"column":3},
++      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":436,"column":3},
+     },
+     'goals/complete': {
+       service: 'goals',
+       description: 'Mark a current non-complete goal complete and disarm it.',
+       invocation: { kind: 'direct' },
+       scope: {
+         context: 'agent',
+@@ -299,17 +299,17 @@
+         },
+       ],
+       result: {
+         mode: 'strict',
+         typeSymbol: '@deepseek-ai/dsh-goal/client#GoalView',
+         create: _deepseek_ai_dsh_goal_goals_complete_result$schema,
+         description: 'the completed view.',
+-        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"type":"number","description":"Total admitted goal-round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
++        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}],"description":"Total admitted goal-round cap, or unlimited for no round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
+       },
+-      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":393,"column":3},
++      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":394,"column":3},
+     },
+     'goals/create': {
+       service: 'goals',
+       description: 'Create one Goal through the remote boundary.',
+       implementation: 'remoteExportCreate',
+       invocation: { kind: 'direct' },
+       scope: {
+@@ -340,32 +340,32 @@
+           name: 'request',
+           description: 'objective and optional round cap.',
+           source: 'json',
+           codec: {
+             mode: 'strict',
+             typeSymbol: '@deepseek-ai/dsh-goal/client#CreateGoalRequest',
+             create: _deepseek_ai_dsh_goal_goals_create_parameter_1$schema,
+-            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"type":"number"}},"required":["objective"],"additionalProperties":true},
++            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}]}},"required":["objective"],"additionalProperties":true},
+           },
+           strictCodec: {
+             mode: 'strict',
+             typeSymbol: '@deepseek-ai/dsh-goal/client#CreateGoalRequest',
+             create: _deepseek_ai_dsh_goal_goals_create_parameter_1_strict$schema,
+-            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"type":"number"}},"required":["objective"],"additionalProperties":false},
++            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}]}},"required":["objective"],"additionalProperties":false},
+           },
+         },
+       ],
+       result: {
+         mode: 'strict',
+         typeSymbol: '@deepseek-ai/dsh-goal/client#CreateGoalResult',
+         create: _deepseek_ai_dsh_goal_goals_create_result$schema,
+         description: 'the created Goal identity.',
+         jsonSchema: {"type":"object","properties":{"ref":{"type":"object","properties":{"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["id","revision"],"additionalProperties":true}},"required":["ref"],"additionalProperties":true},
+       },
+-      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":646,"column":3},
++      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":647,"column":3},
+     },
+     'goals/edit': {
+       service: 'goals',
+       description: 'Edit objective and/or round cap without changing phase.',
+       invocation: { kind: 'direct' },
+       scope: {
+         context: 'agent',
+@@ -412,32 +412,32 @@
+           name: 'request',
+           description: 'at least one replacement field.',
+           source: 'json',
+           codec: {
+             mode: 'strict',
+             typeSymbol: '@deepseek-ai/dsh-goal/client#EditGoalRequest',
+             create: _deepseek_ai_dsh_goal_goals_edit_parameter_2$schema,
+-            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"type":"number"}},"required":[],"additionalProperties":true},
++            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}]}},"required":[],"additionalProperties":true},
+           },
+           strictCodec: {
+             mode: 'strict',
+             typeSymbol: '@deepseek-ai/dsh-goal/client#EditGoalRequest',
+             create: _deepseek_ai_dsh_goal_goals_edit_parameter_2_strict$schema,
+-            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"type":"number"}},"required":[],"additionalProperties":false},
++            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}]}},"required":[],"additionalProperties":false},
+           },
+         },
+       ],
+       result: {
+         mode: 'strict',
+         typeSymbol: '@deepseek-ai/dsh-goal/client#GoalView',
+         create: _deepseek_ai_dsh_goal_goals_edit_result$schema,
+         description: 'the edited view.',
+-        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"type":"number","description":"Total admitted goal-round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
++        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}],"description":"Total admitted goal-round cap, or unlimited for no round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
+       },
+-      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":331,"column":3},
++      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":332,"column":3},
+     },
+     'goals/get': {
+       service: 'goals',
+       description: 'Read the current goal for one exact live agent.',
+       invocation: { kind: 'direct' },
+       scope: {
+         context: 'agent',
+@@ -467,15 +467,15 @@
+       result: {
+         mode: 'strict',
+         typeSymbol: '@deepseek-ai/dsh-goal#goals/get:result',
+         create: _deepseek_ai_dsh_goal_goals_get_result$schema,
+         description: 'a fresh view or `undefined` when no goal is current.',
+         jsonSchemaError: 'typert tool schema: unsupported undefined value',
+       },
+-      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":279,"column":3},
++      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":280,"column":3},
+     },
+     'goals/pause': {
+       service: 'goals',
+       description: 'Pause an active goal and disarm automatic continuation.',
+       invocation: { kind: 'direct' },
+       scope: {
+         context: 'agent',
+@@ -520,17 +520,17 @@
+         },
+       ],
+       result: {
+         mode: 'strict',
+         typeSymbol: '@deepseek-ai/dsh-goal/client#GoalView',
+         create: _deepseek_ai_dsh_goal_goals_pause_result$schema,
+         description: 'the paused view.',
+-        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"type":"number","description":"Total admitted goal-round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
++        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}],"description":"Total admitted goal-round cap, or unlimited for no round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
+       },
+-      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":354,"column":3},
++      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":355,"column":3},
+     },
+     'goals/resume': {
+       service: 'goals',
+       description: 'Resume and arm a stopped goal, or rearm an active goal after a session-start edge, while its round budget still has capacity.',
+       invocation: { kind: 'direct' },
+       scope: {
+         context: 'agent',
+@@ -575,17 +575,17 @@
+         },
+       ],
+       result: {
+         mode: 'strict',
+         typeSymbol: '@deepseek-ai/dsh-goal/client#GoalView',
+         create: _deepseek_ai_dsh_goal_goals_resume_result$schema,
+         description: 'the active view.',
+-        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"type":"number","description":"Total admitted goal-round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
++        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}],"description":"Total admitted goal-round cap, or unlimited for no round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
+       },
+-      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":366,"column":3},
++      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":367,"column":3},
+     },
+   },
+ }, z)
+ 
+ export const TYPERT = {
+   package: '@deepseek-ai/dsh-goal',
+   face: 'host',
+@@ -788,27 +788,27 @@
+           },
+           {
+             "name": "ContinuableSubagentDescriptorData",
+             "declaration": "export interface ContinuableSubagentDescriptorData extends SubagentDescriptorBase {\n    readonly mode: 'continuable';\n    readonly label: string;\n    readonly agentProvider?: string;\n    readonly agentModel?: string;\n    readonly agentReasoningEffort?: ReasoningEffortId;\n    readonly persona?: string;\n    readonly toolFilter?: ToolRestriction;\n}"
+           },
+           {
+             "name": "CreateGoalRequest",
+-            "declaration": "export interface CreateGoalRequest {\n    readonly objective: string;\n    readonly maxGoalRounds?: number;\n}"
++            "declaration": "export interface CreateGoalRequest {\n    readonly objective: string;\n    readonly maxGoalRounds?: number | 'unlimited';\n}"
+           },
+           {
+             "name": "CreateGoalResult",
+             "declaration": "export interface CreateGoalResult {\n    readonly ref: GoalRef;\n}"
+           },
+           {
+             "name": "DeveloperMessage",
+             "declaration": "export interface DeveloperMessage extends MessageBase {\n    readonly role: 'developer';\n}"
+           },
+           {
+             "name": "EditGoalRequest",
+-            "declaration": "export interface EditGoalRequest {\n    readonly objective?: string;\n    readonly maxGoalRounds?: number;\n}"
++            "declaration": "export interface EditGoalRequest {\n    readonly objective?: string;\n    readonly maxGoalRounds?: number | 'unlimited';\n}"
+           },
+           {
+             "name": "EpochHeader",
+             "declaration": "export interface EpochHeader {\n    config: LlmCallConfig;\n    adapterDefaults?: LlmCallConfigAdapterDefaults;\n    tools?: ToolSchema[];\n    system?: never;\n}"
+           },
+           {
+             "name": "EveryScheduleDispatchChange",
+@@ -876,15 +876,15 @@
+           },
+           {
+             "name": "GoalRef",
+             "declaration": "export interface GoalRef {\n    readonly id: GoalId;\n    readonly revision: number;\n}"
+           },
+           {
+             "name": "GoalSnapshot",
+-            "declaration": "export interface GoalSnapshot extends GoalRef {\n    readonly objective: string;\n    readonly phase: GoalPhase;\n    readonly blockedReason?: GoalBlockReason;\n    readonly maxGoalRounds: number;\n}"
++            "declaration": "export interface GoalSnapshot extends GoalRef {\n    readonly objective: string;\n    readonly phase: GoalPhase;\n    readonly blockedReason?: GoalBlockReason;\n    readonly maxGoalRounds: number | 'unlimited';\n}"
+           },
+           {
+             "name": "GoalSnapshotChangeMeta",
+             "declaration": "export interface GoalSnapshotChangeMeta {\n    readonly kind: 'goal/change';\n    readonly version: 1;\n    readonly operation: Exclude<GoalOperation, 'clear'>;\n    readonly goal: GoalSnapshot;\n    readonly roundsStarted: number;\n    readonly createdAt: number;\n    readonly updatedAt: number;\n}"
+           },
+           {
+             "name": "GoalView",
+--- a/node_modules/@deepseek-ai/dsh-goal/lib/typert.remote-client.js
++++ b/node_modules/@deepseek-ai/dsh-goal/lib/typert.remote-client.js
+@@ -30,24 +30,24 @@
+   'activation': z.union([z.literal("armed"), z.literal("disarmed")]).readonly().describe('Process-local continuation eligibility; never persisted.'),
+   'objective': z.string().readonly().describe('Human-requested completion objective.'),
+   'phase': z.union([z.literal("active"), z.literal("paused"), z.literal("blocked"), z.literal("complete")]).readonly().describe('Durable lifecycle phase.'),
+   'blockedReason': z.object({
+   'code': z.string().readonly().describe('Stable lower-kebab-case classification chosen by the blocking policy.'),
+   'message': z.string().readonly().describe('Non-empty explanation shown to humans and models.'),
+ }).readonly().optional().describe('Present exactly while `phase` is `blocked`.'),
+-  'maxGoalRounds': z.number().readonly().describe('Total admitted goal-round cap.'),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().describe('Total admitted goal-round cap, or unlimited for no round cap.'),
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }))
+ let _deepseek_ai_dsh_goal_goals_create_parameter_0$schema$value
+ const _deepseek_ai_dsh_goal_goals_create_parameter_0$schema = () => (_deepseek_ai_dsh_goal_goals_create_parameter_0$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_create_parameter_1$schema$value
+ const _deepseek_ai_dsh_goal_goals_create_parameter_1$schema = () => (_deepseek_ai_dsh_goal_goals_create_parameter_1$schema$value ??= z.object({
+   'objective': z.string().readonly(),
+-  'maxGoalRounds': z.number().readonly().optional(),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().optional(),
+ }))
+ let _deepseek_ai_dsh_goal_goals_create_result$schema$value
+ const _deepseek_ai_dsh_goal_goals_create_result$schema = () => (_deepseek_ai_dsh_goal_goals_create_result$schema$value ??= z.object({
+   'ref': z.object({
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }).readonly(),
+@@ -58,29 +58,29 @@
+ const _deepseek_ai_dsh_goal_goals_edit_parameter_1$schema = () => (_deepseek_ai_dsh_goal_goals_edit_parameter_1$schema$value ??= z.object({
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }))
+ let _deepseek_ai_dsh_goal_goals_edit_parameter_2$schema$value
+ const _deepseek_ai_dsh_goal_goals_edit_parameter_2$schema = () => (_deepseek_ai_dsh_goal_goals_edit_parameter_2$schema$value ??= z.object({
+   'objective': z.string().readonly().optional(),
+-  'maxGoalRounds': z.number().readonly().optional(),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().optional(),
+ }))
+ let _deepseek_ai_dsh_goal_goals_edit_result$schema$value
+ const _deepseek_ai_dsh_goal_goals_edit_result$schema = () => (_deepseek_ai_dsh_goal_goals_edit_result$schema$value ??= z.object({
+   'roundsStarted': z.number().readonly().describe('Highest admitted round number for this goal.'),
+   'createdAt': z.number().readonly().describe('Epoch milliseconds of the create mutation.'),
+   'updatedAt': z.number().readonly().describe('Epoch milliseconds of the latest mutation.'),
+   'activation': z.union([z.literal("armed"), z.literal("disarmed")]).readonly().describe('Process-local continuation eligibility; never persisted.'),
+   'objective': z.string().readonly().describe('Human-requested completion objective.'),
+   'phase': z.union([z.literal("active"), z.literal("paused"), z.literal("blocked"), z.literal("complete")]).readonly().describe('Durable lifecycle phase.'),
+   'blockedReason': z.object({
+   'code': z.string().readonly().describe('Stable lower-kebab-case classification chosen by the blocking policy.'),
+   'message': z.string().readonly().describe('Non-empty explanation shown to humans and models.'),
+ }).readonly().optional().describe('Present exactly while `phase` is `blocked`.'),
+-  'maxGoalRounds': z.number().readonly().describe('Total admitted goal-round cap.'),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().describe('Total admitted goal-round cap, or unlimited for no round cap.'),
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }))
+ let _deepseek_ai_dsh_goal_goals_get_parameter_0$schema$value
+ const _deepseek_ai_dsh_goal_goals_get_parameter_0$schema = () => (_deepseek_ai_dsh_goal_goals_get_parameter_0$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_get_result$schema$value
+ const _deepseek_ai_dsh_goal_goals_get_result$schema = () => (_deepseek_ai_dsh_goal_goals_get_result$schema$value ??= z.union([z.undefined(), z.object({
+@@ -90,15 +90,15 @@
+   'activation': z.union([z.literal("armed"), z.literal("disarmed")]).readonly().describe('Process-local continuation eligibility; never persisted.'),
+   'objective': z.string().readonly().describe('Human-requested completion objective.'),
+   'phase': z.union([z.literal("active"), z.literal("paused"), z.literal("blocked"), z.literal("complete")]).readonly().describe('Durable lifecycle phase.'),
+   'blockedReason': z.object({
+   'code': z.string().readonly().describe('Stable lower-kebab-case classification chosen by the blocking policy.'),
+   'message': z.string().readonly().describe('Non-empty explanation shown to humans and models.'),
+ }).readonly().optional().describe('Present exactly while `phase` is `blocked`.'),
+-  'maxGoalRounds': z.number().readonly().describe('Total admitted goal-round cap.'),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().describe('Total admitted goal-round cap, or unlimited for no round cap.'),
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ })]))
+ let _deepseek_ai_dsh_goal_goals_pause_parameter_0$schema$value
+ const _deepseek_ai_dsh_goal_goals_pause_parameter_0$schema = () => (_deepseek_ai_dsh_goal_goals_pause_parameter_0$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_pause_parameter_1$schema$value
+ const _deepseek_ai_dsh_goal_goals_pause_parameter_1$schema = () => (_deepseek_ai_dsh_goal_goals_pause_parameter_1$schema$value ??= z.object({
+@@ -113,15 +113,15 @@
+   'activation': z.union([z.literal("armed"), z.literal("disarmed")]).readonly().describe('Process-local continuation eligibility; never persisted.'),
+   'objective': z.string().readonly().describe('Human-requested completion objective.'),
+   'phase': z.union([z.literal("active"), z.literal("paused"), z.literal("blocked"), z.literal("complete")]).readonly().describe('Durable lifecycle phase.'),
+   'blockedReason': z.object({
+   'code': z.string().readonly().describe('Stable lower-kebab-case classification chosen by the blocking policy.'),
+   'message': z.string().readonly().describe('Non-empty explanation shown to humans and models.'),
+ }).readonly().optional().describe('Present exactly while `phase` is `blocked`.'),
+-  'maxGoalRounds': z.number().readonly().describe('Total admitted goal-round cap.'),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().describe('Total admitted goal-round cap, or unlimited for no round cap.'),
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }))
+ let _deepseek_ai_dsh_goal_goals_resume_parameter_0$schema$value
+ const _deepseek_ai_dsh_goal_goals_resume_parameter_0$schema = () => (_deepseek_ai_dsh_goal_goals_resume_parameter_0$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_resume_parameter_1$schema$value
+ const _deepseek_ai_dsh_goal_goals_resume_parameter_1$schema = () => (_deepseek_ai_dsh_goal_goals_resume_parameter_1$schema$value ??= z.object({
+@@ -136,15 +136,15 @@
+   'activation': z.union([z.literal("armed"), z.literal("disarmed")]).readonly().describe('Process-local continuation eligibility; never persisted.'),
+   'objective': z.string().readonly().describe('Human-requested completion objective.'),
+   'phase': z.union([z.literal("active"), z.literal("paused"), z.literal("blocked"), z.literal("complete")]).readonly().describe('Durable lifecycle phase.'),
+   'blockedReason': z.object({
+   'code': z.string().readonly().describe('Stable lower-kebab-case classification chosen by the blocking policy.'),
+   'message': z.string().readonly().describe('Non-empty explanation shown to humans and models.'),
+ }).readonly().optional().describe('Present exactly while `phase` is `blocked`.'),
+-  'maxGoalRounds': z.number().readonly().describe('Total admitted goal-round cap.'),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().describe('Total admitted goal-round cap, or unlimited for no round cap.'),
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }))
+ let _deepseek_ai_dsh_goal_goals_clear_parameter_0_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_clear_parameter_0_strict$schema = () => (_deepseek_ai_dsh_goal_goals_clear_parameter_0_strict$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_clear_parameter_1_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_clear_parameter_1_strict$schema = () => (_deepseek_ai_dsh_goal_goals_clear_parameter_1_strict$schema$value ??= z.strictObject({
+@@ -159,27 +159,27 @@
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }))
+ let _deepseek_ai_dsh_goal_goals_create_parameter_0_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_create_parameter_0_strict$schema = () => (_deepseek_ai_dsh_goal_goals_create_parameter_0_strict$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_create_parameter_1_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_create_parameter_1_strict$schema = () => (_deepseek_ai_dsh_goal_goals_create_parameter_1_strict$schema$value ??= z.strictObject({
+   'objective': z.string().readonly(),
+-  'maxGoalRounds': z.number().readonly().optional(),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().optional(),
+ }))
+ let _deepseek_ai_dsh_goal_goals_edit_parameter_0_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_edit_parameter_0_strict$schema = () => (_deepseek_ai_dsh_goal_goals_edit_parameter_0_strict$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_edit_parameter_1_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_edit_parameter_1_strict$schema = () => (_deepseek_ai_dsh_goal_goals_edit_parameter_1_strict$schema$value ??= z.strictObject({
+   'id': z.string().readonly().describe('Stable goal identity.'),
+   'revision': z.number().readonly().describe('Positive revision; every durable mutation increments it.'),
+ }))
+ let _deepseek_ai_dsh_goal_goals_edit_parameter_2_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_edit_parameter_2_strict$schema = () => (_deepseek_ai_dsh_goal_goals_edit_parameter_2_strict$schema$value ??= z.strictObject({
+   'objective': z.string().readonly().optional(),
+-  'maxGoalRounds': z.number().readonly().optional(),
++  'maxGoalRounds': z.union([z.number(), z.literal("unlimited")]).readonly().optional(),
+ }))
+ let _deepseek_ai_dsh_goal_goals_get_parameter_0_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_get_parameter_0_strict$schema = () => (_deepseek_ai_dsh_goal_goals_get_parameter_0_strict$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_pause_parameter_0_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_pause_parameter_0_strict$schema = () => (_deepseek_ai_dsh_goal_goals_pause_parameter_0_strict$schema$value ??= z.string())
+ let _deepseek_ai_dsh_goal_goals_pause_parameter_1_strict$schema$value
+ const _deepseek_ai_dsh_goal_goals_pause_parameter_1_strict$schema = () => (_deepseek_ai_dsh_goal_goals_pause_parameter_1_strict$schema$value ??= z.strictObject({
+@@ -246,15 +246,15 @@
+       result: {
+         mode: 'strict',
+         typeSymbol: '@deepseek-ai/dsh-goal/client#GoalRef',
+         create: _deepseek_ai_dsh_goal_goals_clear_result$schema,
+         description: 'the tombstone ref whose revision is one past the cleared snapshot.',
+         jsonSchema: {"type":"object","properties":{"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["id","revision"],"additionalProperties":true},
+       },
+-      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":435,"column":3},
++      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":436,"column":3},
+     },
+     'goals/complete': {
+       service: 'goals',
+       description: 'Mark a current non-complete goal complete and disarm it.',
+       invocation: { kind: 'direct' },
+       scope: {
+         context: 'agent',
+@@ -299,17 +299,17 @@
+         },
+       ],
+       result: {
+         mode: 'strict',
+         typeSymbol: '@deepseek-ai/dsh-goal/client#GoalView',
+         create: _deepseek_ai_dsh_goal_goals_complete_result$schema,
+         description: 'the completed view.',
+-        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"type":"number","description":"Total admitted goal-round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
+-      },
+-      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":393,"column":3},
++        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}],"description":"Total admitted goal-round cap, or unlimited for no round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
++      },
++      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":394,"column":3},
+     },
+     'goals/create': {
+       service: 'goals',
+       description: 'Create one Goal through the remote boundary.',
+       implementation: 'remoteExportCreate',
+       invocation: { kind: 'direct' },
+       scope: {
+@@ -340,32 +340,32 @@
+           name: 'request',
+           description: 'objective and optional round cap.',
+           source: 'json',
+           codec: {
+             mode: 'strict',
+             typeSymbol: '@deepseek-ai/dsh-goal/client#CreateGoalRequest',
+             create: _deepseek_ai_dsh_goal_goals_create_parameter_1$schema,
+-            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"type":"number"}},"required":["objective"],"additionalProperties":true},
++            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}]}},"required":["objective"],"additionalProperties":true},
+           },
+           strictCodec: {
+             mode: 'strict',
+             typeSymbol: '@deepseek-ai/dsh-goal/client#CreateGoalRequest',
+             create: _deepseek_ai_dsh_goal_goals_create_parameter_1_strict$schema,
+-            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"type":"number"}},"required":["objective"],"additionalProperties":false},
++            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}]}},"required":["objective"],"additionalProperties":false},
+           },
+         },
+       ],
+       result: {
+         mode: 'strict',
+         typeSymbol: '@deepseek-ai/dsh-goal/client#CreateGoalResult',
+         create: _deepseek_ai_dsh_goal_goals_create_result$schema,
+         description: 'the created Goal identity.',
+         jsonSchema: {"type":"object","properties":{"ref":{"type":"object","properties":{"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["id","revision"],"additionalProperties":true}},"required":["ref"],"additionalProperties":true},
+       },
+-      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":646,"column":3},
++      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":647,"column":3},
+     },
+     'goals/edit': {
+       service: 'goals',
+       description: 'Edit objective and/or round cap without changing phase.',
+       invocation: { kind: 'direct' },
+       scope: {
+         context: 'agent',
+@@ -412,32 +412,32 @@
+           name: 'request',
+           description: 'at least one replacement field.',
+           source: 'json',
+           codec: {
+             mode: 'strict',
+             typeSymbol: '@deepseek-ai/dsh-goal/client#EditGoalRequest',
+             create: _deepseek_ai_dsh_goal_goals_edit_parameter_2$schema,
+-            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"type":"number"}},"required":[],"additionalProperties":true},
++            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}]}},"required":[],"additionalProperties":true},
+           },
+           strictCodec: {
+             mode: 'strict',
+             typeSymbol: '@deepseek-ai/dsh-goal/client#EditGoalRequest',
+             create: _deepseek_ai_dsh_goal_goals_edit_parameter_2_strict$schema,
+-            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"type":"number"}},"required":[],"additionalProperties":false},
++            jsonSchema: {"type":"object","properties":{"objective":{"type":"string"},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}]}},"required":[],"additionalProperties":false},
+           },
+         },
+       ],
+       result: {
+         mode: 'strict',
+         typeSymbol: '@deepseek-ai/dsh-goal/client#GoalView',
+         create: _deepseek_ai_dsh_goal_goals_edit_result$schema,
+         description: 'the edited view.',
+-        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"type":"number","description":"Total admitted goal-round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
+-      },
+-      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":331,"column":3},
++        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}],"description":"Total admitted goal-round cap, or unlimited for no round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
++      },
++      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":332,"column":3},
+     },
+     'goals/get': {
+       service: 'goals',
+       description: 'Read the current goal for one exact live agent.',
+       invocation: { kind: 'direct' },
+       scope: {
+         context: 'agent',
+@@ -467,15 +467,15 @@
+       result: {
+         mode: 'strict',
+         typeSymbol: '@deepseek-ai/dsh-goal#goals/get:result',
+         create: _deepseek_ai_dsh_goal_goals_get_result$schema,
+         description: 'a fresh view or `undefined` when no goal is current.',
+         jsonSchemaError: 'typert tool schema: unsupported undefined value',
+       },
+-      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":279,"column":3},
++      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":280,"column":3},
+     },
+     'goals/pause': {
+       service: 'goals',
+       description: 'Pause an active goal and disarm automatic continuation.',
+       invocation: { kind: 'direct' },
+       scope: {
+         context: 'agent',
+@@ -520,17 +520,17 @@
+         },
+       ],
+       result: {
+         mode: 'strict',
+         typeSymbol: '@deepseek-ai/dsh-goal/client#GoalView',
+         create: _deepseek_ai_dsh_goal_goals_pause_result$schema,
+         description: 'the paused view.',
+-        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"type":"number","description":"Total admitted goal-round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
+-      },
+-      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":354,"column":3},
++        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}],"description":"Total admitted goal-round cap, or unlimited for no round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
++      },
++      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":355,"column":3},
+     },
+     'goals/resume': {
+       service: 'goals',
+       description: 'Resume and arm a stopped goal, or rearm an active goal after a session-start edge, while its round budget still has capacity.',
+       invocation: { kind: 'direct' },
+       scope: {
+         context: 'agent',
+@@ -575,15 +575,15 @@
+         },
+       ],
+       result: {
+         mode: 'strict',
+         typeSymbol: '@deepseek-ai/dsh-goal/client#GoalView',
+         create: _deepseek_ai_dsh_goal_goals_resume_result$schema,
+         description: 'the active view.',
+-        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"type":"number","description":"Total admitted goal-round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
+-      },
+-      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":366,"column":3},
++        jsonSchema: {"type":"object","properties":{"roundsStarted":{"type":"number","description":"Highest admitted round number for this goal."},"createdAt":{"type":"number","description":"Epoch milliseconds of the create mutation."},"updatedAt":{"type":"number","description":"Epoch milliseconds of the latest mutation."},"activation":{"type":"string","enum":["armed","disarmed"],"description":"Process-local continuation eligibility; never persisted."},"objective":{"type":"string","description":"Human-requested completion objective."},"phase":{"type":"string","enum":["active","paused","blocked","complete"],"description":"Durable lifecycle phase."},"blockedReason":{"type":"object","properties":{"code":{"type":"string","description":"Stable lower-kebab-case classification chosen by the blocking policy."},"message":{"type":"string","description":"Non-empty explanation shown to humans and models."}},"required":["code","message"],"additionalProperties":true,"description":"Present exactly while `phase` is `blocked`."},"maxGoalRounds":{"oneOf":[{"type":"number"},{"type":"string","const":"unlimited"}],"description":"Total admitted goal-round cap, or unlimited for no round cap."},"id":{"type":"string","description":"Stable goal identity."},"revision":{"type":"number","description":"Positive revision; every durable mutation increments it."}},"required":["roundsStarted","createdAt","updatedAt","activation","objective","phase","maxGoalRounds","id","revision"],"additionalProperties":true},
++      },
++      sourceLocation: {"file":"packages/goal/goal/src/index.ts","line":367,"column":3},
+     },
+   },
+ }, z)
+ 
+ export default TYPERT_REMOTE
+--- a/node_modules/@deepseek-ai/dsh-goal/lib/types/fold.js
++++ b/node_modules/@deepseek-ai/dsh-goal/lib/types/fold.js
+@@ -77,15 +77,16 @@
+         throw new Error(`goal change goal for phase ${phase} must have exactly ${expectedKeys} fields`);
+     }
+     return {
+         id: GoalId(value['id']),
+         revision: positiveInteger(value['revision'], 'goal.revision'),
+         objective: value['objective'],
+         phase,
+-        maxGoalRounds: positiveInteger(value['maxGoalRounds'], 'goal.maxGoalRounds'),
++        maxGoalRounds: value['maxGoalRounds'] === 'unlimited'
++            ? 'unlimited' : positiveInteger(value['maxGoalRounds'], 'goal.maxGoalRounds'),
+         ...phase === 'blocked' ? { blockedReason: decodeBlockReason(value['blockedReason']) } : {},
+     };
+ }
+ /** Decode and validate one ref. */
+ function decodeRef(value) {
+     if (!isRecord(value) || Object.keys(value).sort().join(',') !== 'id,revision') {
+         throw new Error('goal clear tombstone must have exactly id and revision fields');
+@@ -192,15 +193,15 @@
+         case 'resume': {
+             requireSameDefinition(current, next, change.operation);
+             const resumable = new Set([
+                 'active',
+                 'paused',
+                 'blocked',
+             ]);
+-            if (!resumable.has(current.phase) || next.phase !== 'active' || state.roundsStarted >= next.maxGoalRounds) {
++            if (!resumable.has(current.phase) || next.phase !== 'active' || (next.maxGoalRounds !== 'unlimited' && state.roundsStarted >= next.maxGoalRounds)) {
+                 throw new Error('goal resume has an invalid phase transition or exhausted round budget');
+             }
+             break;
+         }
+         case 'complete':
+             requireSameDefinition(current, next, change.operation);
+             if (current.phase === 'complete' || next.phase !== 'complete')
+@@ -292,15 +293,15 @@
+     if (event.type === 'user/message') {
+         const source = goalSource(event.data.source);
+         if (source === undefined)
+             return;
+         const current = state.goal;
+         if (current === undefined || current.phase !== 'active' || source.goalId !== current.id
+             || source.revision !== current.revision || source.round !== state.roundsStarted + 1
+-            || source.round > current.maxGoalRounds) {
++            || (current.maxGoalRounds !== 'unlimited' && source.round > current.maxGoalRounds)) {
+             throw new Error(`goal round at session event ${event.seq} is not the next admitted round of the active goal`);
+         }
+         state.roundsStarted = source.round;
+     }
+ }
+ /**
+  * Fold current goal state from a contiguous session event log.
+--- a/node_modules/@deepseek-ai/dsh-goal/lib/types/index.d.ts
++++ b/node_modules/@deepseek-ai/dsh-goal/lib/types/index.d.ts
+@@ -40,20 +40,20 @@
+         view: (state: NoInfer<GoalProjectionState>) => GoalProjection | null;
+     };
+     stateVersion: number;
+ };
+ /** Deployment defaults for goal creation. */
+ export interface Config {
+     /** Total rounds used when a create request omits its own cap. */
+-    defaultMaxGoalRounds?: number;
++    defaultMaxGoalRounds?: number | 'unlimited';
+ }
+ /** Resolved defaults. */
+ export interface ResolvedConfig {
+-    /** Validated positive safe-integer default round cap. */
+-    defaultMaxGoalRounds: number;
++    /** Validated positive safe-integer round cap or unlimited. */
++    defaultMaxGoalRounds: number | 'unlimited';
+ }
+ /** Goal service (`ctx.goals`) backed exclusively by the owning session log. */
+ export declare class GoalService extends TypertRemoteService {
+     static inject: string[];
+     static Config: z<Config>;
+     private readonly resolved;
+     private readonly runtimeStates;
+--- a/node_modules/@deepseek-ai/dsh-goal/lib/types/index.js
++++ b/node_modules/@deepseek-ai/dsh-goal/lib/types/index.js
+@@ -53,15 +53,15 @@
+     zod.object({
+         goal: zod.object({
+             id: zod.string().min(1),
+             revision: zod.number().int().positive(),
+             objective: zod.string().min(1),
+             phase: zod.union([zod.literal('active'), zod.literal('paused'), zod.literal('blocked'), zod.literal('complete')]),
+             blockedReason: zod.object({ code: zod.string(), message: zod.string() }).optional(),
+-            maxGoalRounds: zod.number().int().positive(),
++            maxGoalRounds: zod.union([zod.number().int().positive(), zod.literal('unlimited')]),
+         }),
+         roundsStarted: zod.number().int().nonnegative(),
+         createdAt: zod.number(),
+         updatedAt: zod.number(),
+     }),
+     zod.null(),
+ ]);
+@@ -74,15 +74,15 @@
+         return;
+     if (!state.seenGoalIds.includes(state.current.goal.id)) {
+         context.addIssue({ code: 'custom', message: 'current goal id must be retained among seen goal ids' });
+     }
+     if (state.current.updatedAt < state.current.createdAt) {
+         context.addIssue({ code: 'custom', message: 'current goal update cannot precede its creation' });
+     }
+-    if (state.current.roundsStarted > state.current.goal.maxGoalRounds) {
++    if (state.current.goal.maxGoalRounds !== 'unlimited' && state.current.roundsStarted > state.current.goal.maxGoalRounds) {
+         context.addIssue({ code: 'custom', message: 'current goal rounds cannot exceed its configured limit' });
+     }
+ });
+ /** Build strict fold state from one checkpoint-safe projection state. */
+ function goalFoldState(state) {
+     return {
+         goal: state.current?.goal,
+@@ -143,20 +143,22 @@
+ /** Strict host goal state with the existing cropped client value. */
+ export const goalProjectionDefinition = {
+     key: 'goal',
+     stateSchema: goalProjectionStateSchema,
+     init: () => ({ current: null, seenGoalIds: [], failure: null }),
+     apply: applyGoalProjection,
+     wire: { viewSchema: goalProjectionSchema, view: state => state.current },
+-    stateVersion: 6,
++    stateVersion: 7,
+ };
+ /** Validate a caller-visible positive safe-integer round cap. */
+ function resolveMaxGoalRounds(value) {
++    if (value === 'unlimited')
++        return value;
+     if (!Number.isSafeInteger(value) || value < 1) {
+-        throw new GoalError('maxGoalRounds must be a positive safe integer', 'GOAL_INVALID_MAX_ROUNDS');
++        throw new GoalError('maxGoalRounds must be a positive safe integer or unlimited', 'GOAL_INVALID_MAX_ROUNDS');
+     }
+     return value;
+ }
+ /** Validate and normalize an objective at the domain boundary. */
+ function resolveObjective(value) {
+     if (typeof value !== 'string' || value.trim().length === 0) {
+         throw new GoalError('goal objective must be a non-empty string', 'GOAL_INVALID_OBJECTIVE');
+@@ -211,15 +213,15 @@
+             __esDecorate(this, null, _complete_decorators, { kind: "method", name: "complete", static: false, private: false, access: { has: obj => "complete" in obj, get: obj => obj.complete }, metadata: _metadata }, null, _instanceExtraInitializers);
+             __esDecorate(this, null, _clear_decorators, { kind: "method", name: "clear", static: false, private: false, access: { has: obj => "clear" in obj, get: obj => obj.clear }, metadata: _metadata }, null, _instanceExtraInitializers);
+             __esDecorate(this, null, _remoteExportCreate_decorators, { kind: "method", name: "remoteExportCreate", static: false, private: false, access: { has: obj => "remoteExportCreate" in obj, get: obj => obj.remoteExportCreate }, metadata: _metadata }, null, _instanceExtraInitializers);
+             if (_metadata) Object.defineProperty(this, Symbol.metadata, { enumerable: true, configurable: true, writable: true, value: _metadata });
+         }
+         static inject = ['agents', 'sessionProjections'];
+         static Config = z.object({
+-            defaultMaxGoalRounds: z.number().default(256),
++            defaultMaxGoalRounds: z.union([z.number(), z.const('unlimited')]).default(256),
+         });
+         resolved = __runInitializers(this, _instanceExtraInitializers);
+         runtimeStates = new WeakMap();
+         goalProjectionHandle;
+         constructor(ctx, config = {}) {
+             super(ctx, 'goals');
+             this.resolved = {
+@@ -335,15 +337,15 @@
+             const resumable = ['active', 'paused', 'blocked'];
+             if (!resumable.includes(current.phase)) {
+                 throw this.transitionError(current, 'resume', resumable);
+             }
+             if (current.phase === 'active' && runtime.activation === 'armed') {
+                 throw new GoalError(`goal "${current.id}" is already active and armed`, 'GOAL_INVALID_TRANSITION');
+             }
+-            if (currentState.roundsStarted >= current.maxGoalRounds) {
++            if (current.maxGoalRounds !== 'unlimited' && currentState.roundsStarted >= current.maxGoalRounds) {
+                 throw new GoalError(`goal "${current.id}" exhausted ${current.maxGoalRounds} goal rounds; increase maxGoalRounds before resuming`, 'GOAL_INVALID_TRANSITION');
+             }
+             return this.commitCurrent(agent, currentState, runtime, 'resume', this.withPhase(current, 'active'), 'armed');
+         }
+         /**
+          * Mark a current non-complete goal complete and disarm it.
+          * @param agent - owning live agent.
+--- a/node_modules/@deepseek-ai/dsh-goal/lib/types/types.d.ts
++++ b/node_modules/@deepseek-ai/dsh-goal/lib/types/types.d.ts
+@@ -19,24 +19,24 @@
+     readonly id: GoalId;
+     /** Positive revision; every durable mutation increments it. */
+     readonly revision: number;
+ }
+ /** Input whose omitted round cap is resolved by the service configuration. */
+ export interface CreateGoalRequest {
+     readonly objective: string;
+-    readonly maxGoalRounds?: number;
++    readonly maxGoalRounds?: number | 'unlimited';
+ }
+ /** Wire-safe acknowledgement of one created goal. */
+ export interface CreateGoalResult {
+     readonly ref: GoalRef;
+ }
+ /** Fields changed by an edit; at least one must be present. */
+ export interface EditGoalRequest {
+     readonly objective?: string;
+-    readonly maxGoalRounds?: number;
++    readonly maxGoalRounds?: number | 'unlimited';
+ }
+ /** Durable continuation phase. Activation is process-local and separate. */
+ export type GoalPhase = 'active' | 'paused' | 'blocked' | 'complete';
+ /** Machine-routable and human-readable explanation for a blocked goal. */
+ export interface GoalBlockReason {
+     /** Stable lower-kebab-case classification chosen by the blocking policy. */
+     readonly code: string;
+@@ -47,16 +47,16 @@
+ export interface GoalSnapshot extends GoalRef {
+     /** Human-requested completion objective. */
+     readonly objective: string;
+     /** Durable lifecycle phase. */
+     readonly phase: GoalPhase;
+     /** Present exactly while `phase` is `blocked`. */
+     readonly blockedReason?: GoalBlockReason;
+-    /** Total admitted goal-round cap. */
+-    readonly maxGoalRounds: number;
++    /** Total admitted goal-round cap, or unlimited for no round cap. */
++    readonly maxGoalRounds: number | 'unlimited';
+ }
+ /** Whether this live process may automatically continue an active goal. */
+ export type GoalActivation = 'armed' | 'disarmed';
+ /** Live process-local activation update forwarded to UI clients. */
+ export interface GoalActivationChanged {
+     /** Session whose live goal activation changed. */
+     readonly sessionId: SessionId;
+--- a/node_modules/@deepseek-ai/dsh-goal-round-driver/lib/index.js
++++ b/node_modules/@deepseek-ai/dsh-goal-round-driver/lib/index.js
+@@ -128,15 +128,15 @@
+ 		const goal = currentGoal(state);
+ 		if (!drivable(goal)) return;
+ 		const subagents = ctx.get("subagents");
+ 		if (subagents !== void 0) {
+ 			await Promise.race([subagents.waitForChildren(agent), unloading.promise]);
+ 			if (!readyAfterCheckpoint(state)) return;
+ 		}
+-		if (goal.roundsStarted >= goal.maxGoalRounds) {
++		if (goal.maxGoalRounds !== "unlimited" && goal.roundsStarted >= goal.maxGoalRounds) {
+ 			ctx.goals.block(agent, goalRef(goal), {
+ 				code: "round-limit",
+ 				message: `Goal reached its configured limit of ${goal.maxGoalRounds} rounds.`
+ 			});
+ 			return;
+ 		}
+ 		const round = goal.roundsStarted + 1;
+--- a/node_modules/@deepseek-ai/dsh-tool-goal/lib/index.js
++++ b/node_modules/@deepseek-ai/dsh-tool-goal/lib/index.js
+@@ -160,15 +160,18 @@
+ 					]
+ 				},
+ 				roundsStarted: {
+ 					type: "integer",
+ 					required: true
+ 				},
+ 				maxGoalRounds: {
+-					type: "integer",
++					oneOf: [{ type: "integer" }, {
++						type: "string",
++						const: "unlimited"
++					}],
+ 					required: true
+ 				},
+ 				blockedReason: {
+ 					type: "object",
+ 					additionalProperties: false,
+ 					properties: {
+ 						code: {
+@@ -277,16 +280,19 @@
+ 		parameters: {
+ 			objective: {
+ 				type: "string",
+ 				required: true,
+ 				description: "The concrete completion objective inferred from the direct human request."
+ 			},
+ 			max_goal_rounds: {
+-				type: "number",
+-				description: "Optional positive safe-integer limit on automatic continuation rounds."
++				oneOf: [{ type: "number" }, {
++					type: "string",
++					const: "unlimited"
++				}],
++				description: "Positive safe-integer limit or unlimited for automatic continuation rounds."
+ 			}
+ 		},
+ 		output: GOAL_OUTPUT,
+ 		execute(args, exec) {
+ 			const execution = goalToolExecution(ctx, exec);
+ 			requireDirectHuman(ctx, execution);
+ 			const goal = ctx.goals.create(execution.agent, {
+@@ -318,16 +324,19 @@
+ 				description: "edit, pause, and resume require a direct top-level human request. complete and blocked are also allowed during an automatic continuation of this goal; blocked is rejected before the configured minimum round count."
+ 			},
+ 			objective: {
+ 				type: "string",
+ 				description: "Replacement objective; valid only with action edit."
+ 			},
+ 			max_goal_rounds: {
+-				type: "number",
+-				description: "Replacement cap; valid only with action edit."
++				oneOf: [{ type: "number" }, {
++					type: "string",
++					const: "unlimited"
++				}],
++				description: "Replacement cap or unlimited; valid only with action edit."
+ 			},
+ 			blocked_reason: {
+ 				type: "string",
+ 				description: "Required only with action blocked: the concrete condition that persisted across rounds and blocks progress."
+ 			}
+ 		},
+ 		output: GOAL_OUTPUT,
+@@ -367,7 +376,9 @@
+ 			return Promise.resolve(goalValue(goal));
+ 		},
+ 		presentCall: (args) => present(`${args.action === "blocked" ? "Mark" : args.action.charAt(0).toUpperCase() + args.action.slice(1)} goal`, "other", args.action === "blocked" && hasText(args.blocked_reason) ? args.blocked_reason : args.action === "edit" && hasText(args.objective) ? args.objective : args.action === "edit" && hasRoundCap(args.max_goal_rounds) ? args.max_goal_rounds : args.goal_id)
+ 	}));
+ }
+ //#endregion
+ export { Config, apply, inject, name };
++
++//# sourceMappingURL=index.js.map

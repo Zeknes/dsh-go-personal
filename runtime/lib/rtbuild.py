@@ -919,6 +919,10 @@ def overlay_entries(runtime_info, with_python=False, with_pnpm=False, with_bridg
     if with_pnpm or with_bridge:
         patch = ("# dsh-app: overlay for `dsh web`, passed with --patch by the app's launch command and\n"
                  "# replaced on every runtime upgrade (edits here do not survive one).\n")
+        patch += ("# Default new persisted goals to no automatic round cap.\n"
+                  "- id: goal\n"
+                  "  config:\n"
+                  "    defaultMaxGoalRounds: unlimited\n")
         if with_pnpm:
             patch += ("#\n"
                       "# Plugin installs (pluginManager) ask pnpm's own registry first; the launch environment\n"
