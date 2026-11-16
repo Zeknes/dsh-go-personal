@@ -242,7 +242,8 @@ void main() {
   group('geometry', () {
     for (final scale in [1.0, 1.3]) {
       testWidgets('capsule: on the composer\'s left edge, 34 high, 12 at both ends (×$scale)', (tester) async {
-        await pumpGenerate(tester, scale: scale);
+        // 完全权限 shows no permission chip, so the capsule leads the row.
+        await pumpGenerate(tester, modes: const SessionModes(preset: 'danger-full-access'), scale: scale);
         await enterMode(tester);
         final capsule = tester.getRect(_capsule);
         final composer = tester.getRect(find.byType(Composer));
@@ -258,12 +259,12 @@ void main() {
         expect(exit.center.dy, moreOrLessEquals(capsule.center.dy, epsilon: 0.01));
       });
 
-      testWidgets('with the permission pill: a 34 round ⚠ first, the capsule 8 after it, both one height (×$scale)', (
+      testWidgets('with the permission chip: a 34 round ⚠ first, the capsule 8 after it, both one height (×$scale)', (
         tester,
       ) async {
         await pumpGenerate(
           tester,
-          modes: const SessionModes(preset: 'danger-full-access'),
+          modes: const SessionModes(preset: 'auto'),
           scale: scale,
         );
         await enterMode(tester);
@@ -472,7 +473,7 @@ void main() {
       testWidgets('capsule beside the permission ⚠ ($suffix)', (tester) async {
         await pumpGenerate(
           tester,
-          modes: const SessionModes(preset: 'danger-full-access'),
+          modes: const SessionModes(preset: 'auto'),
           brightness: brightness,
         );
         await enterMode(tester);

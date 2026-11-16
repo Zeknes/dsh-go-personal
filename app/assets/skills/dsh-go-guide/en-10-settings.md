@@ -42,7 +42,7 @@ Shows your DeepSeek account or API key and balance; tap it to open your account.
 - **Language**: **System**, **简体中文** or **English**.
 - **Notifications**: turn on **Allow notifications**, then choose **Turn complete**, **Error or stopped**, **Needs approval** and **Questions for you**. Alerts from remote hosts need the app running and the connection online. Sound, banners and the lock screen are set in system settings.
 - **Voice**: the **Reading voice** (for reading replies aloud and voice calls), how voice input recognizes speech (**Automatic**, **DeepSeek**, **System**, **Voice model** or **Another cloud service**), the voice model download, and for voice calls **Call background**, **Interrupt by speaking**, **Spoken answers** and **Speakerphone by default**.
-- **Performance**: **Auto**, **Full** or **Light**, plus glass blur, interface motion, fluid motion and **Refresh rate** (Auto / Max / System).
+- **Performance**: **Auto**, **Full** or **Light**, plus glass blur, interface motion and fluid motion.
 - **Background running**: see [FAQ](11-faq.md). Until it's set up, the row says so on the right.
 - **System permissions**: the system permissions each feature uses. [Open](dshgo://open/system-permissions)
 - **Privacy and sharing**:

@@ -1754,10 +1754,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     // messages stay in sight above the composer.
     final typing =
         MediaQuery.sizeOf(context).height < WindowClass.compactHeight && MediaQuery.viewInsetsOf(context).bottom > 0;
-    // 「自动允许中」/「完全权限」 ride on the bar right above the composer, not a
-    // row of their own: beside the activity strip while a reply generates, at
-    // the start of the capsule row otherwise. Their own row only where neither
-    // shows (read only; a phone on its side typing folds both away).
+    // 「自动允许中」 and the permission chip ride on the bar right above the
+    // composer, not a row of their own: beside the activity strip while a
+    // reply generates, at the start of the capsule row otherwise. Their own
+    // row only where neither shows (read only; a phone on its side typing
+    // folds both away). 完全权限 has no chip, so in that preset the row holds
+    // the mode capsule alone.
     final running = chat?.running ?? false;
     final pillsBesideStrip = sessionId != null && running && !typing;
     final pillsInCapsules = !readOnly && !running && !typing;
@@ -2223,9 +2225,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
   }
 
   /// What sits on the composer's top-left edge: 「自动允许中 ×」 while this
-  /// client allows everything, else 「⚠ 完全权限 ›」 for a conversation looser
-  /// than 工作区内修改 (unless [risk] is false: they are beside the activity
-  /// strip), then the generation mode's capsule; nothing otherwise.
+  /// client allows everything, else the conversation's permission chip — any
+  /// preset but 完全权限, which shows none (unless [risk] is false: they are
+  /// beside the activity strip) — then the generation mode's capsule; nothing
+  /// otherwise.
   Widget? _composerPills(String? sessionId, {required bool autoApprove, GenerateParams? generate, bool risk = true}) {
     final capsule = generate == null
         ? null
@@ -2236,11 +2239,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     } else if (sessionId != null && autoApprove) {
       pill = AutoApprovePill(onDisable: () => ref.read(chatProvider(sessionId).notifier).setAutoApprove(false));
     } else if (sessionId != null) {
-      final risky = ref.watch(sessionModesProvider(sessionId).select((m) => m.risky ? m.preset : null));
-      if (risky != null) {
-        // Beside the mode capsule it shrinks to its ⚠ (§4.2).
+      final (preset, warns) = ref.watch(
+        sessionModesProvider(sessionId).select((m) => (m.chipPreset, m.warns)),
+      );
+      if (preset != null) {
+        // Beside the mode capsule it shrinks to its glyph (§4.2).
         pill = PermissionPill(
-          preset: risky,
+          preset: preset,
+          warn: warns,
           compact: capsule != null,
           onTap: () => unawaited(showPermissionSheet(context, sessionId)),
         );
@@ -2258,7 +2264,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     );
   }
 
-  /// 「自动允许中」/「完全权限」 beside the activity strip while a reply generates.
+  /// 「自动允许中」/ 「⚠ 自动审查」 beside the activity strip while a reply
+  /// generates. 完全权限 and the quieter restrictive chips stay off this row.
   Widget? _stripRisk(String sessionId, {required bool autoApprove}) {
     if (autoApprove) {
       return StripRiskChip.autoApprove(
@@ -2266,7 +2273,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         onDisable: () => ref.read(chatProvider(sessionId).notifier).setAutoApprove(false),
       );
     }
-    final risky = ref.watch(sessionModesProvider(sessionId).select((m) => m.risky ? m.preset : null));
+    final risky = ref.watch(sessionModesProvider(sessionId).select((m) => m.warns ? m.preset : null));
     if (risky == null) return null;
     return StripRiskChip.permission(
       context,

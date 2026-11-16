@@ -255,9 +255,14 @@ void main() {
   });
 
   group('permission pill', () {
-    Future<ChatHarness> pumpChat(WidgetTester tester, SessionModes modes, {double scale = 1}) async {
+    Future<ChatHarness> pumpChat(
+      WidgetTester tester,
+      SessionModes modes, {
+      double scale = 1,
+      ChatState state = const ChatState(loading: false),
+    }) async {
       usePhoneView(tester);
-      final harness = ChatHarness(newChatCatalogs: true, session: 's1');
+      final harness = ChatHarness(newChatCatalogs: true, session: 's1', states: {'s1': state});
       await tester.pumpWidget(
         testApp(
           MediaQuery.withClampedTextScaling(minScaleFactor: scale, maxScaleFactor: scale, child: const ChatScreen()),
@@ -271,14 +276,27 @@ void main() {
       return harness;
     }
 
-    testWidgets('nothing for 工作区内修改', (tester) async {
-      await pumpChat(tester, const SessionModes(preset: 'workspace-write'));
+    testWidgets('完全权限: no chip at all', (tester) async {
+      await pumpChat(tester, const SessionModes(preset: 'danger-full-access'));
       expect(find.byType(PermissionPill), findsNothing);
+      expect(find.byType(AutoApprovePill), findsNothing);
+      expect(find.text('完全权限'), findsNothing);
     });
 
+    for (final preset in ['read-only', 'workspace-write']) {
+      testWidgets('$preset: the quiet chip names it, and a tap opens its permissions', (tester) async {
+        await pumpChat(tester, SessionModes(preset: preset));
+        expect(find.byType(PermissionPill), findsOneWidget);
+        expect(find.text(preset == 'read-only' ? '仅可查看' : '工作区内修改'), findsOneWidget);
+        await tester.tap(find.byType(PermissionPill));
+        await pumpFrames(tester);
+        expect(find.text('本对话的权限'), findsOneWidget);
+      });
+    }
+
     for (final scale in [1.0, 1.3]) {
-      testWidgets('完全权限: on the composer\'s edge, 34 high, equal end insets (×$scale)', (tester) async {
-        await pumpChat(tester, const SessionModes(preset: 'danger-full-access'), scale: scale);
+      testWidgets('自动审查: on the composer\'s edge, 34 high, equal end insets (×$scale)', (tester) async {
+        await pumpChat(tester, const SessionModes(preset: 'auto'), scale: scale);
         final pill = tester.getRect(find.byType(PermissionPill));
         final composer = tester.getRect(find.byType(Composer));
         expect(pill.left, moreOrLessEquals(composer.left, epsilon: 0.01));
@@ -309,6 +327,24 @@ void main() {
       await tester.tap(find.byType(PermissionPill));
       await pumpFrames(tester);
       expect(find.text('本对话的权限'), findsOneWidget);
+    });
+
+    testWidgets('while a reply generates: 自动审查 moves beside the strip, 完全权限 shows nothing', (tester) async {
+      await pumpChat(
+        tester,
+        const SessionModes(preset: 'auto'),
+        state: const ChatState(loading: false, running: true),
+      );
+      expect(find.byType(StripRiskChip), findsOneWidget);
+      expect(find.byType(PermissionPill), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await pumpChat(
+        tester,
+        const SessionModes(preset: 'danger-full-access'),
+        state: const ChatState(loading: false, running: true),
+      );
+      expect(find.byType(StripRiskChip), findsNothing);
     });
 
     testWidgets('自动允许中 wins while this client allows everything', (tester) async {
@@ -367,12 +403,29 @@ void goldens() {
             brightness: brightness,
             overrides: [
               ...harness.overrides,
-              ..._extra(modes: const SessionModes(preset: 'danger-full-access')),
+              ..._extra(modes: const SessionModes(preset: 'auto')),
             ],
           ),
         );
         await pumpFrames(tester);
         await expectLater(find.byType(ChatScreen), matchesGoldenFile('goldens/permission_pill_$suffix.png'));
+      });
+
+      testWidgets('quiet permission chip, 工作区内修改 ($suffix)', (tester) async {
+        usePhoneView(tester);
+        final harness = ChatHarness(newChatCatalogs: true, session: 's1');
+        await tester.pumpWidget(
+          testApp(
+            const ChatScreen(),
+            brightness: brightness,
+            overrides: [
+              ...harness.overrides,
+              ..._extra(modes: const SessionModes(preset: 'workspace-write')),
+            ],
+          ),
+        );
+        await pumpFrames(tester);
+        await expectLater(find.byType(ChatScreen), matchesGoldenFile('goldens/permission_chip_quiet_$suffix.png'));
       });
     }
   });
