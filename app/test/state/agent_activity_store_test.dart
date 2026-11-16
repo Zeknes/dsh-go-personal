@@ -81,7 +81,8 @@ void main() {
       running: false,
       timing: const SubagentTiming(settled: Duration(minutes: 4), lastTurnCompleted: false),
     );
-    await store.flush();
+    // The store batches writes; wait out its debounce.
+    await Future<void>.delayed(const Duration(milliseconds: 2200));
 
     final prefs = await SharedPreferences.getInstance();
     final saved = decodeActivity(prefs.getString(AgentActivityController.prefsKey));

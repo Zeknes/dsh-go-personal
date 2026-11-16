@@ -233,8 +233,11 @@ class AgentActivityController extends Notifier<AgentActivityMap> {
     _loaded ??= _readStore();
     _foldSessions(sessions.values);
     ref.onDispose(() {
+      // A launch that ends inside the debounce still keeps the last turn it saw.
+      final pending = _save;
       _save?.cancel();
       _save = null;
+      if (pending != null) unawaited(_writeStore(pruneActivity(_merged())));
     });
     if (conn != null) {
       try {
@@ -317,14 +320,6 @@ class AgentActivityController extends Notifier<AgentActivityMap> {
       _save = null;
       unawaited(_writeStore(pruneActivity(_merged())));
     });
-  }
-
-  /// Writes now, for a caller that is about to leave (a launch that ends before
-  /// the debounce would otherwise forget the latest turns).
-  Future<void> flush() async {
-    _save?.cancel();
-    _save = null;
-    await _writeStore(pruneActivity(_merged()));
   }
 
   Future<void> _readStore() async {
