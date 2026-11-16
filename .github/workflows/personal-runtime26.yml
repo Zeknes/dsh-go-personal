@@ -64,7 +64,10 @@ jobs:
           python3 -c 'import json; m=json.load(open("runtime/out/${{ matrix.abi }}/assets/runtime/manifest.json")); assert m["ubuntuVersion"] == "26.04.1"'
       - name: Host integration test
         if: matrix.abi == 'x86_64'
-        run: NETWORK=0 bash runtime/test-host.sh
+        run: |
+          # Ubuntu 24.04 runners restrict unprivileged user namespaces; test-host.sh runs bwrap --unshare-user.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+          NETWORK=0 bash runtime/test-host.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: runtime-${{ matrix.abi }}
