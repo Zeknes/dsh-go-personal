@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:dsh_app/speech/voice_cloud.dart';
 import 'package:dsh_app/runtime/runtime_bridge.dart';
 import 'package:dsh_app/runtime/runtime_state.dart';
+import 'package:dsh_app/state/agent_activity.dart';
 import 'package:dsh_app/state/attachments.dart';
 import 'package:dsh_app/state/balance_state.dart';
 import 'package:dsh_app/state/chat_state.dart';
@@ -25,6 +26,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/fake_activity.dart';
 import '../../support/test_fonts.dart';
 
 export '../../support/test_fonts.dart' show cjkFamily, loadTestFonts;
@@ -449,6 +451,9 @@ class ChatHarness {
       permissionStateProvider.overrideWith((ref, sessionId) async => null),
     ],
     sessionUsageProvider.overrideWith2((id) => FakeUsage(id, usage[id] ?? SessionUsage.empty)),
+    // No control stream against the fake host; a test that needs frames passes
+    // its own FakeActivity.
+    agentActivityProvider.overrideWith(FakeActivity.new),
     sessionsProvider.overrideWith(() => sessions),
     currentSessionProvider.overrideWith(() => FixedSession(session)),
     chatProvider.overrideWith2(

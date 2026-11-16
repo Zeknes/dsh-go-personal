@@ -1128,6 +1128,14 @@
       }
     }
   },
+  "botsSubagentsShowMore": "再显示 {count} 个",
+  "@botsSubagentsShowMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "botsSubagentsSearch": "搜索子代理",
   "botsSubagentsNoMatch": "没有匹配的子代理",
   "botsBackToParent": "返回「{title}」",

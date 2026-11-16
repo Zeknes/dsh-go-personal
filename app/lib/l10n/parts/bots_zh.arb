@@ -54,6 +54,14 @@
     }
   },
   "botsSubagentsShowAll": "显示全部 {count} 个",
+  "botsSubagentsShowMore": "再显示 {count} 个",
+  "@botsSubagentsShowMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "@botsSubagentsShowAll": {
     "placeholders": {
       "count": {

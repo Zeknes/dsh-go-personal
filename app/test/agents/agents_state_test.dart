@@ -1,6 +1,7 @@
 // The lineage, header facts and team roster derived from the host session
 // list (support.dart mirrors DSH 0.2.1-rc.2's `session/list`).
 
+import 'package:dsh_app/state/agent_activity.dart';
 import 'package:dsh_app/state/agents_state.dart';
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_client/dsh_client.dart';
@@ -15,6 +16,7 @@ ProviderContainer _container(Map<String, SessionSummary> sessions) {
     overrides: [
       activeConnectionProvider.overrideWithValue(AsyncData<HostConnection?>(fakeConnection)),
       hostSessionsProvider.overrideWithValue(sessions),
+      agentActivityProvider.overrideWith(FakeActivity.new),
     ],
   );
   addTearDown(container.dispose);

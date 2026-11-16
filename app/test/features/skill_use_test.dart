@@ -5,7 +5,6 @@
 // `flutter test --update-goldens test/features/skill_use_test.dart`.
 
 import 'package:dsh_app/runtime/runtime_state.dart';
-import 'package:dsh_app/state/agents_state.dart';
 import 'package:dsh_app/state/composer_insert.dart';
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/features_state.dart';

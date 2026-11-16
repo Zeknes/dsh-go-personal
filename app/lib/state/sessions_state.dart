@@ -848,6 +848,17 @@ class SessionsController extends AsyncNotifier<List<SessionSummary>> {
 
 final sessionsProvider = AsyncNotifierProvider<SessionsController, List<SessionSummary>>(SessionsController.new);
 
+/// Every session of the active host by id, subagent children included.
+///
+/// Lives here, not with the agent panels, so the activity store can fold the
+/// list without importing the panels back.
+final hostSessionsProvider = Provider<Map<String, SessionSummary>>((ref) {
+  if (ref.watch(activeConnectionProvider).value == null) return const {};
+  ref.watch(sessionsProvider);
+  final all = ref.read(sessionsProvider.notifier).allSessions;
+  return {for (final s in all) s.sessionId: s};
+});
+
 /// A remote host with no working directory of its own: without a workspace, a
 /// new conversation would land wherever its `dsh web` happened to start.
 bool _hostPicksNewChatDirectory(HostConnection? conn) => conn != null && !conn.isLocal && conn.workingDirectory == null;

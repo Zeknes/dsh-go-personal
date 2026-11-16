@@ -266,9 +266,13 @@ class SubagentRow extends StatelessWidget {
   }
 }
 
+/// A page of a long lineage: `lineagePage` more rows per tap, so expanding a
+/// conversation with thousands of children never builds them all at once.
+const lineagePage = 50;
+
 /// A tree: the most recent rows of its lineage, every running one included,
-/// nested levels indented under their parent. With [onToggleExpanded] the card
-/// ends with a row that shows the rest or folds back.
+/// nested levels indented under their parent. With [onShowMore] the card ends
+/// with a row that adds the next page.
 class SubagentTreeCard extends StatelessWidget {
   const SubagentTreeCard({
     super.key,
@@ -277,8 +281,8 @@ class SubagentTreeCard extends StatelessWidget {
     this.currentId,
     this.onOpen,
     this.margin = const EdgeInsets.fromLTRB(16, 0, 16, 0),
-    this.expanded = false,
-    this.onToggleExpanded,
+    this.limit = recentLineageLimit,
+    this.onShowMore,
   });
 
   final List<SubagentNode> nodes;
@@ -286,14 +290,15 @@ class SubagentTreeCard extends StatelessWidget {
   final String? currentId;
   final ValueChanged<SubagentNode>? onOpen;
   final EdgeInsetsGeometry margin;
-  final bool expanded;
-  final VoidCallback? onToggleExpanded;
+
+  /// Rows to show (running ones always, whatever this says).
+  final int limit;
+  final VoidCallback? onShowMore;
 
   @override
   Widget build(BuildContext context) {
-    final rows = visibleLineage(nodes, expanded: expanded);
-    final total = lineageSize(nodes);
-    final hidden = total - rows.length;
+    final rows = visibleLineage(nodes, limit: limit);
+    final hidden = lineageSize(nodes) - rows.length;
     return ListPageCard(
       title: title,
       margin: margin,
@@ -304,11 +309,11 @@ class SubagentTreeCard extends StatelessWidget {
             index: i,
             child: SubagentRow(node: row.node, depth: row.depth, current: row.node.id == currentId, onOpen: onOpen),
           ),
-        if (onToggleExpanded != null && (hidden > 0 || expanded && total > recentLineageLimit))
-          LineageCountRow(
-            total: total,
-            expanded: expanded,
-            onTap: onToggleExpanded!,
+        if (onShowMore != null && hidden > 0)
+          ListPageRow(
+            title: context.l10n.botsSubagentsShowMore(hidden < lineagePage ? hidden : lineagePage),
+            onTap: onShowMore,
+            chevron: true,
           ),
       ],
     );

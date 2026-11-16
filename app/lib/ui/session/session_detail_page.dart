@@ -1341,7 +1341,9 @@ class SubagentsTab extends ConsumerStatefulWidget {
 }
 
 class _SubagentsTabState extends ConsumerState<SubagentsTab> {
-  bool _expanded = false;
+  /// Rows of the lineage shown so far; 「再显示」 adds a page at a time, so a
+  /// conversation with thousands of children never builds them all at once.
+  int _limit = recentLineageLimit;
 
   void _open(BuildContext context, WidgetRef ref, SubagentNode node) {
     selectSubagent(ref, node.address);
@@ -1392,8 +1394,8 @@ class _SubagentsTabState extends ConsumerState<SubagentsTab> {
           SubagentTreeCard(
             title: lineageTitle(nodes),
             nodes: nodes,
-            expanded: _expanded,
-            onToggleExpanded: () => setState(() => _expanded = !_expanded),
+            limit: _limit,
+            onShowMore: () => setState(() => _limit += lineagePage),
             onOpen: (node) => _open(context, ref, node),
           ),
           if (calls.isNotEmpty) const SizedBox(height: 24),

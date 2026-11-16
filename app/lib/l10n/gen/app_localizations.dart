@@ -3572,6 +3572,12 @@ abstract class L10n {
   /// **'显示全部 {count} 个'**
   String botsSubagentsShowAll(int count);
 
+  /// No description provided for @botsSubagentsShowMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'再显示 {count} 个'**
+  String botsSubagentsShowMore(int count);
+
   /// No description provided for @botsSubagentsSearch.
   ///
   /// In zh, this message translates to:

@@ -8,6 +8,8 @@ import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 
+export '../support/fake_activity.dart';
+
 /// Frozen "now" for live timers.
 final agentsNow = DateTime(2026, 10, 24, 14, 30);
 

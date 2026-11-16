@@ -2,6 +2,7 @@
 // the newest Host-recorded change, with the tree kept whole. Pure functions, no
 // widgets: the sheet and the details tab both read this order.
 
+import 'package:dsh_app/state/agent_activity.dart';
 import 'package:dsh_app/state/agents_state.dart';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -156,7 +157,9 @@ void main() {
       expect(running.state, AgentRunState.running);
       // The turn opened 2 minutes ago; its `through` would move with every
       // token, so the order uses the start and stays put while it streams.
-      expect(lineageActivity(running), agentsNow.subtract(const Duration(minutes: 2)));
+      final activity = lineageActivity(running);
+      expect(activity.time, agentsNow.subtract(const Duration(minutes: 2)));
+      expect(activity.exact, isTrue);
     });
 
     test('old rows without a prompt time fall back to the catalog creation', () {
@@ -172,7 +175,11 @@ void main() {
         ),
       );
       expect(nodes.map((n) => n.id), ['known', 'legacy']);
-      expect(lineageActivity(nodes.last), agentsNow.subtract(const Duration(minutes: 7)));
+      // No prompt time and no Host event time: the creation time stands in, and
+      // says so.
+      final activity = lineageActivity(nodes.last);
+      expect(activity.time, agentsNow.subtract(const Duration(minutes: 7)));
+      expect(activity.exact, isFalse);
     });
 
     test('nothing dated at all: the id keeps the order stable', () {
@@ -207,6 +214,106 @@ void main() {
       expect(first, ['c-1', 'c-2', 'c-3']);
       for (var round = 0; round < 3; round++) {
         expect(buildLineage(parentId, sessions).map((n) => n.id), first);
+      }
+    });
+  });
+
+  group('host event clock', () {
+    AgentActivity closed(String id, {required DateTime endedAt, required bool completed}) => foldActivity(
+      foldActivity(
+        null,
+        seq: 10,
+        running: true,
+        timing: SubagentTiming(activeSince: endedAt.subtract(const Duration(minutes: 2)), activeThrough: endedAt),
+      ),
+      seq: 12,
+      running: false,
+      timing: SubagentTiming(settled: const Duration(minutes: 2), lastTurnCompleted: completed),
+    );
+
+    test('finished rows are ordered by when they finished, not by dispatch', () {
+      final sessions = _tree(
+        [_entry('dispatched-first'), _entry('dispatched-last')],
+        [
+          // Dispatched first, finished last.
+          _row('dispatched-first', lastTurnCompleted: true, updatedAt: agentsNow.subtract(const Duration(hours: 3))),
+          // Dispatched last, finished first.
+          _row('dispatched-last', lastTurnCompleted: true, updatedAt: agentsNow.subtract(const Duration(minutes: 5))),
+        ],
+      );
+      final activity = {
+        'dispatched-first': closed('dispatched-first', endedAt: agentsNow.subtract(const Duration(minutes: 1)), completed: true),
+        'dispatched-last': closed('dispatched-last', endedAt: agentsNow.subtract(const Duration(minutes: 40)), completed: true),
+      };
+      final nodes = buildLineage(parentId, sessions, activity: activity);
+      expect(nodes.map((n) => n.id), ['dispatched-first', 'dispatched-last']);
+      final first = lineageActivity(nodes.first);
+      expect(first.time, agentsNow.subtract(const Duration(minutes: 1)));
+      expect(first.exact, isTrue);
+    });
+
+    test('a turn the app never watched close falls back to the dispatch time', () {
+      final sessions = _tree(
+        [_entry('dispatched-first'), _entry('dispatched-last')],
+        [
+          _row('dispatched-first', lastTurnCompleted: true, updatedAt: agentsNow.subtract(const Duration(hours: 3))),
+          _row('dispatched-last', lastTurnCompleted: true, updatedAt: agentsNow.subtract(const Duration(minutes: 5))),
+        ],
+      );
+      final nodes = buildLineage(parentId, sessions);
+      expect(nodes.map((n) => n.id), ['dispatched-last', 'dispatched-first']);
+      final first = lineageActivity(nodes.first);
+      expect(first.time, agentsNow.subtract(const Duration(minutes: 5)));
+      expect(first.exact, isFalse);
+    });
+
+    test('a newer frame than the row settles the state before the next list read', () {
+      final sessions = _tree(
+        [_entry('ending')],
+        // The row's projection predates the turn ending: no outcome yet.
+        [_row('ending', updatedAt: agentsNow.subtract(const Duration(minutes: 9)))],
+      );
+      expect(buildLineage(parentId, sessions).single.state, AgentRunState.idle);
+
+      final nodes = buildLineage(parentId, sessions, activity: {
+        'ending': closed('ending', endedAt: agentsNow.subtract(const Duration(minutes: 1)), completed: true),
+      });
+      expect(nodes.single.state, AgentRunState.completed);
+      expect(nodes.single.state, isNot(AgentRunState.idle));
+    });
+
+    test('an ending that failed is not reported as a finish', () {
+      final sessions = _tree(
+        [_entry('ending')],
+        [_row('ending', updatedAt: agentsNow.subtract(const Duration(minutes: 9)))],
+      );
+      final nodes = buildLineage(parentId, sessions, activity: {
+        'ending': closed('ending', endedAt: agentsNow.subtract(const Duration(minutes: 1)), completed: false),
+      });
+      expect(nodes.single.state, AgentRunState.failed);
+    });
+
+    test('a running child keeps its order while its turn streams', () {
+      AgentActivity streaming(int second) => foldActivity(
+        null,
+        seq: 10 + second,
+        running: true,
+        timing: SubagentTiming(
+          activeSince: agentsNow.subtract(const Duration(minutes: 2)),
+          activeThrough: agentsNow.subtract(Duration(minutes: 2)).add(Duration(seconds: second)),
+        ),
+      );
+      final sessions = _tree(
+        [_entry('older'), _entry('newer')],
+        [
+          _row('older', running: true, updatedAt: agentsNow.subtract(const Duration(minutes: 2))),
+          _row('newer', running: true, updatedAt: agentsNow.subtract(const Duration(minutes: 1))),
+        ],
+      );
+      // 'older' streams through many events; the order stays: newest turn first.
+      for (final second in [1, 5, 30, 90]) {
+        final nodes = buildLineage(parentId, sessions, activity: {'older': streaming(second)});
+        expect(nodes.map((n) => n.id), ['newer', 'older']);
       }
     });
   });

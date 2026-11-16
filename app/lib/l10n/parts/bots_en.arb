@@ -19,6 +19,7 @@
   "botsFailedCount": "{count, plural, =1{1 failed} other{{count} failed}}",
   "botsNestedCount": "{count, plural, =1{Includes 1 child agent} other{Includes {count} child agents}}",
   "botsSubagentsShowAll": "{count, plural, =1{Show the 1 subagent} other{Show all {count}}}",
+  "botsSubagentsShowMore": "{count, plural, =1{Show 1 more} other{Show {count} more}}",
   "botsSubagentsSearch": "Search subagents",
   "botsSubagentsNoMatch": "No subagent matches",
   "botsBackToParent": "Back to “{title}”",

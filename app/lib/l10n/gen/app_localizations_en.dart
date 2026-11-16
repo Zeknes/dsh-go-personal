@@ -2014,6 +2014,12 @@ class L10nEn extends L10n {
   }
 
   @override
+  String botsSubagentsShowMore(int count) {
+    String _temp0 = intl.Intl.pluralLogic(count, locale: localeName, other: 'Show $count more', one: 'Show 1 more');
+    return '$_temp0';
+  }
+
+  @override
   String get botsSubagentsSearch => 'Search subagents';
 
   @override

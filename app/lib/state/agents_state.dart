@@ -15,17 +15,12 @@ import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/l10n.dart';
+import 'agent_activity.dart';
 import 'connection_state.dart';
 import 'plugins_state.dart';
 import 'sessions_state.dart';
 
-/// Every session of the active host by id, subagent children included.
-final hostSessionsProvider = Provider<Map<String, SessionSummary>>((ref) {
-  if (ref.watch(activeConnectionProvider).value == null) return const {};
-  ref.watch(sessionsProvider);
-  final all = ref.read(sessionsProvider.notifier).allSessions;
-  return {for (final s in all) s.sessionId: s};
-});
+export 'sessions_state.dart' show hostSessionsProvider;
 
 /// What a subagent is doing, as the chip says it.
 enum AgentRunState {
@@ -61,6 +56,7 @@ class SubagentNode {
     this.timing,
     this.createdAt,
     this.updatedAt,
+    this.live,
     this.children = const [],
   });
 
@@ -83,6 +79,10 @@ class SubagentNode {
   /// The Host's `updatedAt` for the child: the later of its creation and its
   /// last prompt (dispatch or continuation), read from the session list.
   final DateTime? updatedAt;
+
+  /// The Host's event clock for this child, when the app has watched it work
+  /// or finish (see `agent_activity.dart`).
+  final AgentActivity? live;
   final List<SubagentNode> children;
 
   /// External tasks have no local conversation.
@@ -100,14 +100,32 @@ class SubagentNode {
   }
 }
 
-AgentRunState _stateOf(SessionSummary? summary) {
-  if (summary == null) return AgentRunState.idle;
-  if (summary.running) return AgentRunState.running;
-  return switch (summary.projections.subagentTiming?.lastTurnCompleted) {
+AgentRunState _stateOf(SessionSummary? summary, AgentActivity? live) {
+  if (summary?.running ?? live?.running ?? false) return AgentRunState.running;
+  // A control frame newer than the row's projection cut knows the outcome
+  // before the next `session/list` read does.
+  final cut = summary?.projections.asOfSeq ?? -1;
+  final completed = live != null && live.seq > cut
+      ? live.lastTurnCompleted
+      : summary?.projections.subagentTiming?.lastTurnCompleted;
+  return switch (completed) {
     true => AgentRunState.completed,
     false => AgentRunState.failed,
     null => AgentRunState.idle,
   };
+}
+
+/// The Host moment a node last changed, and whether it is the Host's own clock.
+class LineageActivity {
+  const LineageActivity({this.time, this.exact = false});
+
+  final DateTime? time;
+
+  /// True when [time] came from the Host's event clock (a turn that ended, or
+  /// a turn still open). False: the app never saw one, and [time] is the
+  /// dispatch (or creation) time — the fallback for old history and for turns
+  /// that closed while the app was away.
+  final bool exact;
 }
 
 // -----------------------------------------------------------------------------
@@ -126,18 +144,21 @@ int lineageStateRank(AgentRunState state) => switch (state) {
 
 DateTime? _moment(DateTime? time) => time == null || time.millisecondsSinceEpoch <= 0 ? null : time;
 
-/// The Host's own time for this node's last change a person caused: the prompt
-/// that dispatched or continued it, or the start of a turn still open. The
-/// Host records no end time, so a finished node's value is its last prompt —
-/// not when it finished — and a node with neither falls back to its catalog
-/// creation time.
-DateTime? lineageActivity(SubagentNode node) {
-  DateTime? newest;
-  for (final mark in [_moment(node.updatedAt), if (node.running) _moment(node.timing?.activeSince)]) {
-    if (mark == null) continue;
-    if (newest == null || mark.isAfter(newest)) newest = mark;
+/// When the Host last did something in this node: the end of its last turn
+/// (from the app's activity store), the start of the turn it is in, or — when
+/// no turn was ever watched — the prompt that dispatched or continued it.
+LineageActivity lineageActivity(SubagentNode node) {
+  final live = node.live;
+  if (node.running) {
+    final since = _moment(live?.turnStart) ?? _moment(node.timing?.activeSince);
+    if (since != null) return LineageActivity(time: since, exact: true);
+  } else {
+    // A closed turn's end, or — for a turn whose close was missed — its last
+    // event: either way the Host's own clock.
+    final ended = _moment(live?.lastActivity);
+    if (ended != null) return LineageActivity(time: ended, exact: true);
   }
-  return newest ?? _moment(node.createdAt);
+  return LineageActivity(time: _moment(node.updatedAt) ?? _moment(node.createdAt));
 }
 
 /// The best rank in the subtree: a running grandchild lifts its ancestors so
@@ -152,7 +173,7 @@ int _subtreeRank(SubagentNode node) {
 }
 
 DateTime? _subtreeActivity(SubagentNode node) {
-  var newest = lineageActivity(node);
+  var newest = lineageActivity(node).time;
   for (final child in node.children) {
     final at = _subtreeActivity(child);
     if (at != null && (newest == null || at.isAfter(newest))) newest = at;
@@ -263,6 +284,7 @@ List<LineageRow> visibleLineage(
 List<SubagentNode> buildLineage(
   String parentId,
   Map<String, SessionSummary> sessions, {
+  Map<String, AgentActivity> activity = const {},
   int depth = 0,
   Set<String>? seen,
 }) {
@@ -276,13 +298,14 @@ List<SubagentNode> buildLineage(
       (childrenByParent[parent] ??= []).add(session);
     }
   }
-  return _buildLineage(parentId, sessions, childrenByParent, depth, seen ?? <String>{parentId});
+  return _buildLineage(parentId, sessions, childrenByParent, activity, depth, seen ?? <String>{parentId});
 }
 
 List<SubagentNode> _buildLineage(
   String parentId,
   Map<String, SessionSummary> sessions,
   Map<String, List<SessionSummary>> childrenByParent,
+  Map<String, AgentActivity> activity,
   int depth,
   Set<String> visited,
 ) {
@@ -308,18 +331,20 @@ List<SubagentNode> _buildLineage(
     final title = summary?.title?.trim();
     final label = entry.label ?? identity?.label ?? title;
     final mode = entry.mode == SubagentMode.unknown && identity != null ? identity.mode : entry.mode;
+    final live = activity[entry.id];
     nodes.add(
       SubagentNode(
         id: entry.id,
         parentId: parentId,
         label: label == null || label.isEmpty ? appL10n.stateSubagent : label,
         mode: mode,
-        state: mode == SubagentMode.external ? AgentRunState.idle : _stateOf(summary),
+        state: mode == SubagentMode.external ? AgentRunState.idle : _stateOf(summary, live),
         title: title == null || title.isEmpty || title == label ? null : title,
         timing: summary?.projections.subagentTiming,
         createdAt: entry.createdAt,
         updatedAt: summary?.updatedAt,
-        children: _buildLineage(entry.id, sessions, childrenByParent, depth + 1, visited),
+        live: live,
+        children: _buildLineage(entry.id, sessions, childrenByParent, activity, depth + 1, visited),
       ),
     );
   }
@@ -329,7 +354,8 @@ List<SubagentNode> _buildLineage(
 /// The lineage under one conversation.
 final subagentLineageProvider = Provider.autoDispose.family<List<SubagentNode>, String>((ref, parentId) {
   final sessions = ref.watch(hostSessionsProvider);
-  return buildLineage(parentId, sessions);
+  final activity = ref.watch(agentActivityProvider);
+  return buildLineage(parentId, sessions, activity: activity);
 });
 
 /// A child conversation's place under its parent.

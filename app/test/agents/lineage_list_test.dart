@@ -2,6 +2,7 @@
 // built lazily, the history is one row away, search finds any of them, and a
 // child changing state moves without losing its row.
 
+import 'package:dsh_app/state/agent_activity.dart';
 import 'package:dsh_app/state/agents_state.dart';
 import 'package:dsh_app/state/connection_state.dart';
 import 'package:dsh_app/state/plugins_state.dart';
@@ -97,6 +98,7 @@ Map<String, SessionSummary> _wide(int count, {Set<String> running = const {}}) {
 List<Override> _overrides(Map<String, SessionSummary> sessions) => [
   _sessionsProvider.overrideWith(() => _Sessions(sessions)),
   hostSessionsProvider.overrideWith((ref) => ref.watch(_sessionsProvider)),
+  agentActivityProvider.overrideWith(FakeActivity.new),
   activeConnectionProvider.overrideWithValue(AsyncData<HostConnection?>(fakeConnection)),
   teamProvider.overrideWith2((leadId) => FakeTeam(leadId, null)),
   teamMessagesProvider.overrideWith((ref, leadId) async => const TeamMessagesSnapshot()),
@@ -247,6 +249,66 @@ void main() {
     expect(_visibleIds(tester), ['c-mid', 'c-old', 'c-run']);
     // Same three rows: nothing was duplicated or left behind by the move.
     expect(tester.widgetList(find.byType(SubagentRow)), hasLength(3));
+  });
+
+  testWidgets('a child that ends while the sheet is open takes its real end time', (tester) async {
+    final sessions = {
+      ..._wide(0),
+      'c-run': _child('c-run', updatedAt: agentsNow.subtract(const Duration(minutes: 5)), running: true),
+      // Ended, but the row's projection predates the end: no outcome yet.
+      'c-old': _child('c-old', updatedAt: agentsNow.subtract(const Duration(hours: 1))),
+      'c-mid': _child('c-mid', updatedAt: agentsNow.subtract(const Duration(minutes: 10)), lastTurnCompleted: true),
+    };
+    sessions[parentId] = SessionSummary(
+      sessionId: parentId,
+      updatedAt: agentsNow,
+      running: false,
+      blank: false,
+      agentAvailable: false,
+      projections: SessionProjections(10, {
+        'subagentCatalog': [
+          for (final id in ['c-old', 'c-mid', 'c-run'])
+            {
+              'id': id,
+              'mode': 'continuable',
+              'label': id,
+              'createdAt': agentsNow.subtract(const Duration(hours: 2)).millisecondsSinceEpoch,
+            },
+        ],
+      }),
+    );
+    final container = await _pump(tester, sessions);
+    expect(_visibleIds(tester), ['c-run', 'c-mid', 'c-old']);
+    // Its row never saw the turn end: 「未运行」, not a finish.
+    expect(find.widgetWithText(SubagentRow, '未运行'), findsOneWidget);
+
+    // The Host's control stream: a turn opens, streams, then closes.
+    final activity = container.read(agentActivityProvider.notifier) as FakeActivity;
+    activity
+      ..record(
+        'c-old',
+        seq: 98,
+        running: true,
+        timing: SubagentTiming(
+          activeSince: agentsNow.subtract(const Duration(minutes: 3)),
+          activeThrough: agentsNow.subtract(const Duration(minutes: 1)),
+        ),
+      )
+      ..record(
+        'c-old',
+        seq: 99,
+        running: false,
+        timing: const SubagentTiming(settled: Duration(minutes: 2), lastTurnCompleted: true),
+      );
+    await pumpFrames(tester, 4);
+
+    // Ended a minute ago: above the child dispatched ten minutes ago, and the
+    // state is the outcome the frame carried — never a flash of 「未运行」.
+    expect(_visibleIds(tester), ['c-run', 'c-old', 'c-mid']);
+    expect(find.widgetWithText(SubagentRow, '未运行'), findsNothing);
+    expect(tester.widgetList(find.byType(SubagentRow)), hasLength(3));
+    // Let the store's save debounce land before the tree goes away.
+    await tester.pump(const Duration(seconds: 3));
   });
 
   testWidgets('scrolling keeps its place when a row down the list changes', (tester) async {

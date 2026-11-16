@@ -1892,6 +1892,11 @@ class L10nZh extends L10n {
   }
 
   @override
+  String botsSubagentsShowMore(int count) {
+    return '再显示 $count 个';
+  }
+
+  @override
   String get botsSubagentsSearch => '搜索子代理';
 
   @override
