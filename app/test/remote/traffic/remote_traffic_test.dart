@@ -224,7 +224,10 @@ void main() {
     expect(app.host.connects, 2);
     expect(app.meter.count(r'open $events'), 1);
     expect(app.meter.count('open session/follow'), 1);
-    expect(app.meter.count('open session/control'), lessThanOrEqualTo(1));
+    // Two subscribers ride the connection: the chat's panels/usage, and the
+    // sub-agent activity store that dates the lineage. Each re-opens exactly
+    // once after the drop — no growth per attempt.
+    expect(app.meter.count('open session/control'), 2);
     expect(_chat(tester, 'S0').syncing, isFalse);
     await app.close();
   });

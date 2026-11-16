@@ -1,6 +1,7 @@
 import 'dart:collection';
 import 'dart:convert';
 
+import 'package:dsh_app/state/agent_activity.dart';
 import 'package:dsh_app/state/agents_state.dart';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,6 +36,22 @@ Map<String, SessionSummary> _wide(int count) => {
 };
 
 void main() {
+  test('the 2000-record activity cache never drops a task from the lineage', () {
+    final sessions = _wide(agentActivityKeep + 100);
+    final activity = pruneActivity({
+      for (var i = 0; i < agentActivityKeep + 100; i++)
+        'child-$i': foldActivity(
+          null,
+          seq: 1,
+          running: true,
+          timing: SubagentTiming(activeSince: DateTime.utc(2026).add(Duration(seconds: i))),
+        ),
+    });
+    expect(activity, hasLength(agentActivityKeep));
+    // The cache only dates rows; every dispatched child stays in the tree.
+    expect(buildLineage('root', sessions, activity: activity), hasLength(agentActivityKeep + 100));
+  });
+
   test('wide lineage scans the session snapshot once, including leaf nodes', () {
     final sessions = _CountedSessions(_wide(200));
     final nodes = buildLineage('root', sessions);

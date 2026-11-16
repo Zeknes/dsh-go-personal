@@ -5,6 +5,7 @@
 
 import 'package:dsh_app/runtime/runtime_state.dart';
 import 'package:dsh_app/state/adaptive_layout_state.dart';
+import 'package:dsh_app/state/agent_activity.dart';
 import 'package:dsh_app/state/attachments.dart';
 import 'package:dsh_app/state/balance_state.dart';
 import 'package:dsh_app/state/bots_state.dart' show dsBotApiFactoryProvider;
@@ -30,6 +31,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../chat/support/harness.dart';
+import '../../support/fake_activity.dart';
 import '../../chat/support/run_info_fixture.dart';
 import '../../notify/support.dart';
 import '../golden_harness.dart' show sampleNow;
@@ -135,6 +137,9 @@ List<Override> homeOverrides({
   ChatState Function(String id)? chat,
 }) => [
   activeConnectionProvider.overrideWithValue(AsyncData<HostConnection?>(fakeConnection)),
+  // No control stream against the fake host (its mock transport cannot upgrade
+  // a WebSocket); the lineage still renders from the session list.
+  agentActivityProvider.overrideWith(FakeActivity.new),
   localConnectionProvider.overrideWith(NoLocalEngine.new),
   localRuntimeProvider.overrideWith(StaticRuntime.new),
   modelCatalogProvider.overrideWith((ref) async => testCatalog),

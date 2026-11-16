@@ -6,9 +6,10 @@
 // `active.through` — the time of the newest committed event folded into the open
 // turn — and drops it when the turn closes. So the app reads that clock while a
 // turn runs and remembers, per child session, when it last saw a turn end; that
-// is the "last real update" a finished child is ordered by. A turn the app never
-// saw close (closed while the app was away, or history from an older Host) keeps
-// no end time, and the lineage falls back to the prompt time.
+// is the "last real update" a finished child is ordered by, while a running one
+// is ordered by its newest event. A turn the app never saw close (closed while
+// the app was away, or history from an older Host) keeps no end time, and the
+// lineage falls back to the prompt time.
 //
 // Only committed Host events set these times: nothing here reads the local
 // clock, so a rebuild, a scroll, a timer tick or opening a list never invents an
@@ -77,8 +78,9 @@ class AgentActivity {
   /// Host time of the newest committed event folded into that turn.
   final DateTime? lastEventAt;
 
-  /// Host time of the last event of the last turn this app watched close: when
-  /// that turn ended, as far as the app could see.
+  /// Host time of the last event the app saw in the last turn it watched close.
+  /// The Host drops `active` at `turn/end`, so this is the closest the app gets
+  /// to an end time — not the turn's exact end.
   final DateTime? lastEndedAt;
 
   /// Outcome of that turn: true completed, false ended otherwise, null unknown.
@@ -87,9 +89,9 @@ class AgentActivity {
   /// The last moment the Host did something here, when the app has one.
   DateTime? get lastActivity => lastEndedAt ?? lastEventAt;
 
-  /// What a panel would draw differently: a turn opening or closing, not each
-  /// event inside it. [lastEventAt] moves with every streamed token, so it is
-  /// kept without publishing a change.
+  /// What a panel draws differently at once: a turn opening or closing. An
+  /// event inside an open turn still moves the order, and is published through
+  /// the controller's publish window rather than immediately.
   bool sameReading(AgentActivity other) =>
       running == other.running &&
       turnStart == other.turnStart &&
@@ -197,6 +199,9 @@ typedef AgentActivityMap = Map<String, AgentActivity>;
 const agentActivityKeep = 2000;
 
 /// [records] with the newest [agentActivityKeep] kept (oldest activity out).
+/// This caps only the time cache: tasks and their sessions are never removed
+/// here, and a child without a record still appears in the lineage, dated by
+/// its dispatch time.
 AgentActivityMap pruneActivity(AgentActivityMap records) {
   if (records.length <= agentActivityKeep) return records;
   final kept = records.entries.toList()
@@ -243,18 +248,30 @@ class AgentActivityController extends Notifier<AgentActivityMap> {
   final AgentActivityMap _records = {};
   Future<void>? _loaded;
   Timer? _save;
+  Timer? _publish;
+
+  /// How often an event inside an open turn may reach the list: a stream of
+  /// tokens moves the order at most this often, while the time published is
+  /// always the Host's newest committed event, never a local clock read.
+  static const publishWindow = Duration(milliseconds: 500);
 
   @override
   AgentActivityMap build() {
     final conn = ref.watch(activeConnectionProvider).value;
-    final sessions = ref.watch(hostSessionsProvider);
     _loaded ??= _readStore();
-    _foldSessions(sessions.values);
+    _foldSessions(ref.read(hostSessionsProvider).values);
+    // A new session list folds in without rebuilding this notifier: rebuilding
+    // would re-subscribe the control stream on every refresh.
+    ref.listen(hostSessionsProvider, (_, next) {
+      if (_foldSessions(next.values)) _publishNow();
+    });
     ref.onDispose(() {
       // A launch that ends inside the debounce still keeps the last turn it saw.
       final pending = _save;
       _save?.cancel();
       _save = null;
+      _publish?.cancel();
+      _publish = null;
       if (pending != null) unawaited(_writeStore(pruneActivity(_merged())));
     });
     if (conn != null) {
@@ -272,9 +289,10 @@ class AgentActivityController extends Notifier<AgentActivityMap> {
   AgentActivityMap _merged() => Map.unmodifiable(_records);
 
   /// Folds one `session/list` snapshot: a child row's status, and its timing
-  /// when the row carries `subagentTiming`.
-  void _foldSessions(Iterable<SessionSummary> rows) {
-    var touched = false;
+  /// when the row carries `subagentTiming`. Returns whether anything changed.
+  bool _foldSessions(Iterable<SessionSummary> rows) {
+    var changed = false;
+    var boundary = false;
     for (final row in rows) {
       if (!row.isSubagent) continue;
       final timing = row.projections.subagentTiming;
@@ -288,9 +306,11 @@ class AgentActivityController extends Notifier<AgentActivityMap> {
       final before = _records[row.sessionId];
       if (next == before) continue;
       _records[row.sessionId] = next;
-      if (before == null || !next.sameReading(before)) touched = true;
+      changed = true;
+      if (before == null || !next.sameReading(before)) boundary = true;
     }
-    if (touched) _persist();
+    if (boundary) _persist();
+    return changed;
   }
 
   void _onControl(SessionControlUpdate update) {
@@ -322,11 +342,28 @@ class AgentActivityController extends Notifier<AgentActivityMap> {
     final next = foldActivity(before, seq: seq, running: running, timing: timing);
     if (next == before) return;
     _records[sessionId] = next;
-    // A streamed event is not a redraw: only a turn opening or closing is.
+    // A turn opening or closing redraws at once; an event inside one only moves
+    // the order, so it is merged into at most one redraw per publish window.
     if (!next.sameReading(before ?? const AgentActivity())) {
-      state = _merged();
+      _publishNow();
       _persist();
+    } else if (next.lastEventAt != before?.lastEventAt) {
+      _publishSoon();
     }
+  }
+
+  void _publishNow() {
+    _publish?.cancel();
+    _publish = null;
+    if (ref.mounted) state = _merged();
+  }
+
+  void _publishSoon() {
+    if (_publish != null) return;
+    _publish = Timer(publishWindow, () {
+      _publish = null;
+      if (ref.mounted) state = _merged();
+    });
   }
 
   void _persist() {

@@ -144,17 +144,21 @@ int lineageStateRank(AgentRunState state) => switch (state) {
 
 DateTime? _moment(DateTime? time) => time == null || time.millisecondsSinceEpoch <= 0 ? null : time;
 
-/// When the Host last did something in this node: the end of its last turn
-/// (from the app's activity store), the start of the turn it is in, or — when
-/// no turn was ever watched — the prompt that dispatched or continued it.
+/// When the Host last did something in this node: the newest committed event of
+/// the turn it is in (from the app's activity store), the turn's start when no
+/// event was seen, or — when no turn was ever watched — the prompt that
+/// dispatched or continued it.
 LineageActivity lineageActivity(SubagentNode node) {
   final live = node.live;
   if (node.running) {
-    final since = _moment(live?.turnStart) ?? _moment(node.timing?.activeSince);
-    if (since != null) return LineageActivity(time: since, exact: true);
+    // 最近更新 wins over the turn's start: two running tasks are ordered by
+    // whichever actually did something (a status, tool or message event) last.
+    final updated =
+        _moment(live?.lastEventAt) ?? _moment(live?.turnStart) ?? _moment(node.timing?.activeSince);
+    if (updated != null) return LineageActivity(time: updated, exact: true);
   } else {
-    // A closed turn's end, or — for a turn whose close was missed — its last
-    // event: either way the Host's own clock.
+    // A closed turn's last event — the closest the Host leaves to an end time,
+    // since it drops `active` when the turn ends.
     final ended = _moment(live?.lastActivity);
     if (ended != null) return LineageActivity(time: ended, exact: true);
   }

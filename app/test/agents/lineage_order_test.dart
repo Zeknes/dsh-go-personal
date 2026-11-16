@@ -139,7 +139,16 @@ void main() {
       expect(lineageSize(after), 2);
     });
 
-    test('an open turn is dated by its start, not by each event', () {
+    test('an open turn is dated by its newest committed event', () {
+      final live = foldActivity(
+        null,
+        seq: 10,
+        running: true,
+        timing: SubagentTiming(
+          activeSince: agentsNow.subtract(const Duration(minutes: 2)),
+          activeThrough: agentsNow.subtract(const Duration(seconds: 20)),
+        ),
+      );
       final running = buildLineage(
         parentId,
         _tree(
@@ -153,13 +162,27 @@ void main() {
             ),
           ],
         ),
+        activity: {'r': live},
       ).single;
       expect(running.state, AgentRunState.running);
-      // The turn opened 2 minutes ago; its `through` would move with every
-      // token, so the order uses the start and stays put while it streams.
+      // 最近更新: the Host's newest event, not the turn's start.
       final activity = lineageActivity(running);
-      expect(activity.time, agentsNow.subtract(const Duration(minutes: 2)));
+      expect(activity.time, agentsNow.subtract(const Duration(seconds: 20)));
       expect(activity.exact, isTrue);
+    });
+
+    test('a running row with no watched turn falls back to dispatch, and says so', () {
+      final node = buildLineage(
+        parentId,
+        _tree(
+          [_entry('r')],
+          [_row('r', running: true, updatedAt: agentsNow.subtract(const Duration(minutes: 5)))],
+        ),
+      ).single;
+      expect(node.running, isTrue);
+      final activity = lineageActivity(node);
+      expect(activity.time, agentsNow.subtract(const Duration(minutes: 5)));
+      expect(activity.exact, isFalse);
     });
 
     test('old rows without a prompt time fall back to the catalog creation', () {
@@ -293,27 +316,39 @@ void main() {
       expect(nodes.single.state, AgentRunState.failed);
     });
 
-    test('a running child keeps its order while its turn streams', () {
-      AgentActivity streaming(int second) => foldActivity(
+    test('two running children swap as the newer one acts, and only then', () {
+      AgentActivity event(Duration ago) => foldActivity(
         null,
-        seq: 10 + second,
+        seq: 10,
         running: true,
         timing: SubagentTiming(
-          activeSince: agentsNow.subtract(const Duration(minutes: 2)),
-          activeThrough: agentsNow.subtract(Duration(minutes: 2)).add(Duration(seconds: second)),
+          activeSince: agentsNow.subtract(const Duration(minutes: 30)),
+          activeThrough: agentsNow.subtract(ago),
         ),
       );
       final sessions = _tree(
-        [_entry('older'), _entry('newer')],
+        [_entry('a'), _entry('b')],
         [
-          _row('older', running: true, updatedAt: agentsNow.subtract(const Duration(minutes: 2))),
-          _row('newer', running: true, updatedAt: agentsNow.subtract(const Duration(minutes: 1))),
+          _row('a', running: true, updatedAt: agentsNow.subtract(const Duration(minutes: 2))),
+          _row('b', running: true, updatedAt: agentsNow.subtract(const Duration(minutes: 2))),
         ],
       );
-      // 'older' streams through many events; the order stays: newest turn first.
-      for (final second in [1, 5, 30, 90]) {
-        final nodes = buildLineage(parentId, sessions, activity: {'older': streaming(second)});
-        expect(nodes.map((n) => n.id), ['newer', 'older']);
+      // b acted a minute ago, a two minutes ago: b leads.
+      var nodes = buildLineage(parentId, sessions, activity: {
+        'a': event(const Duration(minutes: 2)),
+        'b': event(const Duration(minutes: 1)),
+      });
+      expect(nodes.map((n) => n.id), ['b', 'a']);
+      // a's next real event puts it first — the newest update wins.
+      final acted = {
+        'a': event(const Duration(seconds: 10)),
+        'b': event(const Duration(minutes: 1)),
+      };
+      nodes = buildLineage(parentId, sessions, activity: acted);
+      expect(nodes.map((n) => n.id), ['a', 'b']);
+      // No further event: rebuilding (a tick, a scroll) keeps that order.
+      for (var round = 0; round < 3; round++) {
+        expect(buildLineage(parentId, sessions, activity: acted).map((n) => n.id), ['a', 'b']);
       }
     });
   });

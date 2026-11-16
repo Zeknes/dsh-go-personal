@@ -153,4 +153,39 @@ void main() {
     // ordered by the turn it is in.
     expect(now.lastEndedAt, _endedAt);
   });
+
+  test('events inside a running turn reach listeners once per publish window', () async {
+    SharedPreferences.setMockInitialValues({});
+    final container = _container();
+    final seen = <AgentActivityMap>[];
+    container.listen(agentActivityProvider, (_, next) => seen.add(next), fireImmediately: true);
+    await _settled();
+    final store = container.read(agentActivityProvider.notifier);
+    final start = _endedAt.subtract(const Duration(minutes: 5));
+    SubagentTiming open(int seconds) =>
+        SubagentTiming(activeSince: start, activeThrough: start.add(Duration(seconds: seconds)));
+
+    // The turn opening is a status change: published at once.
+    store.applyObservation('child-5', seq: 10, running: true, timing: open(0));
+    expect(container.read(agentActivityProvider)['child-5']!.running, isTrue);
+    seen.clear();
+
+    // Many token slices in a row: no rebuild per slice, and the time carried is
+    // the Host's newest event.
+    for (final seconds in [1, 2, 3, 4, 5]) {
+      store.applyObservation('child-5', seq: 10 + seconds, timing: open(seconds));
+    }
+    expect(seen, isEmpty);
+    await Future<void>.delayed(AgentActivityController.publishWindow + const Duration(milliseconds: 120));
+    expect(seen, hasLength(1));
+    expect(
+      container.read(agentActivityProvider)['child-5']!.lastEventAt,
+      start.add(const Duration(seconds: 5)),
+    );
+
+    // Nothing new: waiting another window publishes nothing (no tick-made update).
+    seen.clear();
+    await Future<void>.delayed(AgentActivityController.publishWindow + const Duration(milliseconds: 120));
+    expect(seen, isEmpty);
+  });
 }
