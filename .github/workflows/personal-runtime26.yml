@@ -56,6 +56,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP/guest"
           sudo tar -xf runtime/out/${{ matrix.abi }}/assets/runtime/rootfs-${{ matrix.abi }}.tar.xz -C "$RUNNER_TEMP/guest"
           sudo cp /usr/bin/qemu-aarch64-static "$RUNNER_TEMP/guest/usr/bin/"
+          # The rootfs archive carries no device nodes; git needs /dev/null inside the chroot.
+          sudo mkdir -p "$RUNNER_TEMP/guest/dev"
+          sudo mount --bind /dev "$RUNNER_TEMP/guest/dev"
           if [ '${{ matrix.abi }}' = arm64-v8a ]; then cmd='/usr/bin/qemu-aarch64-static /bin/bash'; else cmd='/bin/bash'; fi
           sudo chroot "$RUNNER_TEMP/guest" $cmd -c 'set -e; . /etc/os-release; test "$VERSION_ID" = 26.04; node --version; git --version; python3 --version; apt-get check'
           python3 -c 'import json; m=json.load(open("runtime/out/${{ matrix.abi }}/assets/runtime/manifest.json")); assert m["ubuntuVersion"] == "26.04.1"'
