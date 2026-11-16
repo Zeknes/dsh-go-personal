@@ -439,11 +439,10 @@ void main() {
       await _pump(tester, const PermissionPage(sessionId: 's1'), overrides: live());
 
       expect(find.text('当前对话'), findsOneWidget);
-      // First group: current conversation.
+      // First group: current conversation; a pick applies at once.
       await tester.tap(find.text('工作区内修改').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, '确认'));
-      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
       expect(carrier.argsOf('commands/execute').single, {
         'agentId': 's1',
         'line': '/permission workspace-write',
@@ -452,14 +451,7 @@ void main() {
 
       await tester.tap(find.text('仅可查看').last);
       await tester.pumpAndSettle();
-      expect(find.text('切换为仅可查看？'), findsOneWidget);
-      await tester.tap(find.widgetWithText(TextButton, '取消'));
-      await tester.pumpAndSettle();
-      expect(carrier.argsOf('settings/mutate'), isEmpty);
-      await tester.tap(find.text('仅可查看').last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, '确认'));
-      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
       expect(carrier.argsOf('settings/mutate').single, {
         'ns': 'permission',
         'ops': [

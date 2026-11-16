@@ -7210,11 +7210,6 @@ class L10nZh extends L10n {
   }
 
   @override
-  String featuresPermissionChangeTitle(String mode) {
-    return '切换为$mode？';
-  }
-
-  @override
   String get featuresPermissionReadOnly => '仅可查看';
 
   @override

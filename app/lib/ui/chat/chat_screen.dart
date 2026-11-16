@@ -2239,14 +2239,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     } else if (sessionId != null && autoApprove) {
       pill = AutoApprovePill(onDisable: () => ref.read(chatProvider(sessionId).notifier).setAutoApprove(false));
     } else if (sessionId != null) {
-      final (preset, warns) = ref.watch(
-        sessionModesProvider(sessionId).select((m) => (m.chipPreset, m.warns)),
-      );
+      final preset = ref.watch(sessionModesProvider(sessionId).select((m) => m.chipPreset));
       if (preset != null) {
         // Beside the mode capsule it shrinks to its glyph (§4.2).
         pill = PermissionPill(
           preset: preset,
-          warn: warns,
           compact: capsule != null,
           onTap: () => unawaited(showPermissionSheet(context, sessionId)),
         );
@@ -2264,21 +2261,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     );
   }
 
-  /// 「自动允许中」/ 「⚠ 自动审查」 beside the activity strip while a reply
-  /// generates. 完全权限 and the quieter restrictive chips stay off this row.
+  /// 「自动允许中 ×」 beside the activity strip while a reply generates; the
+  /// permission chip itself keeps its place above the composer.
   Widget? _stripRisk(String sessionId, {required bool autoApprove}) {
-    if (autoApprove) {
-      return StripRiskChip.autoApprove(
-        context,
-        onDisable: () => ref.read(chatProvider(sessionId).notifier).setAutoApprove(false),
-      );
-    }
-    final risky = ref.watch(sessionModesProvider(sessionId).select((m) => m.warns ? m.preset : null));
-    if (risky == null) return null;
-    return StripRiskChip.permission(
+    if (!autoApprove) return null;
+    return StripRiskChip.autoApprove(
       context,
-      preset: risky,
-      onTap: () => unawaited(showPermissionSheet(context, sessionId)),
+      onDisable: () => ref.read(chatProvider(sessionId).notifier).setAutoApprove(false),
     );
   }
 

@@ -82,9 +82,7 @@ void main() {
     expect(find.text('自动审查'), findsOneWidget);
     await tester.tap(find.text('自动审查'));
     await tester.pumpAndSettle();
-    expect(find.text('切换为自动审查？'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, '确认'));
-    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
     expect(carrier.argsOf('commands/execute').single['line'], '/permission auto');
     expect(carrier.argsOf('settings/mutate'), isEmpty);
   });

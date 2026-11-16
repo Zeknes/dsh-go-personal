@@ -1,8 +1,8 @@
 // The permission chip above the composer (docs/design/settings-ia.md §4.4):
-// the conversation's preset — 「⚠ 自动审查 ›」 in the warning tone when it is
-// looser than 工作区内修改, a quiet 「仅可查看 ›」/「工作区内修改 ›」 otherwise —
-// and a tap opens its permissions. 完全权限 shows no chip at all: it is this
-// app's ordinary setting, and 设置 › 权限 still switches it. Grown out of
+// the conversation's preset as a quiet, neutral chip — 「仅可查看 ›」,
+// 「工作区内修改 ›」, 「自动审查 ›」 — and a tap opens its permissions.
+// 完全权限 shows no chip at all: it is this app's ordinary setting, so no
+// persistent hint follows it, and 设置 › 权限 still switches it. Grown out of
 // [AutoApprovePill], which still says 「自动允许中 ×」 while this client allows
 // everything itself. While a reply generates, either one sits right of the
 // activity strip ([StripRiskChip]).
@@ -31,13 +31,7 @@ abstract final class PermissionPillMetrics {
 /// The conversation's permission: 34 high, an icon at each end, equal insets.
 /// [compact] (beside the generation mode capsule) is the 34 round glyph alone.
 class PermissionPill extends StatelessWidget {
-  const PermissionPill({
-    super.key,
-    required this.preset,
-    required this.onTap,
-    this.compact = false,
-    this.warn = false,
-  });
+  const PermissionPill({super.key, required this.preset, required this.onTap, this.compact = false});
 
   /// `read-only`, `workspace-write`, `auto` or `custom`; never
   /// `danger-full-access`, which shows no chip.
@@ -45,28 +39,17 @@ class PermissionPill extends StatelessWidget {
   final VoidCallback onTap;
   final bool compact;
 
-  /// 自动审查 (`auto`) is looser than 工作区内修改: the chip warns in the
-  /// warning tone; the other presets are restrictive and stay quiet.
-  final bool warn;
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final dsh = DshColors.of(context);
     final scheme = theme.colorScheme;
-    final fg = warn ? dsh.onWarningContainer : scheme.onSurfaceVariant;
-    final fill = warn
-        ? Color.alphaBlend(dsh.warningContainer.withValues(alpha: 0.94), scheme.surface)
-        : scheme.surfaceContainerHighest;
-    final edge = warn ? dsh.warning.withValues(alpha: 0.35) : scheme.outlineVariant;
+    final fg = scheme.onSurfaceVariant;
+    final fill = scheme.surfaceContainerHighest;
+    final edge = scheme.outlineVariant;
     final name = permissionName(preset);
     const side = PermissionPillMetrics.inset;
-    final glyph = Icon(
-      warn ? AppIcons.permissionRisky : AppIcons.permissions,
-      size: PermissionPillMetrics.icon,
-      color: fg,
-    );
+    final glyph = Icon(AppIcons.permissions, size: PermissionPillMetrics.icon, color: fg);
     return Semantics(
       button: true,
       label: l10n.nearbyPermissionPill(name),
@@ -116,11 +99,11 @@ class PermissionPill extends StatelessWidget {
   }
 }
 
-/// 「自动允许中」 or the permission chip right of the activity strip while a
-/// reply generates, instead of a row of its own above it: as high as the
-/// strip. Its words show for the first seconds of each run, then only its
-/// icons stay; it is read out whole all along, and a tap does what the pill's
-/// does. Only 自动审查 comes here: it is the one preset whose chip warns.
+/// 「自动允许中 ×」 right of the activity strip while a reply generates,
+/// instead of a row of its own above it: as high as the strip. Its words show
+/// for the first seconds of each run, then only its icons stay; it is read out
+/// whole all along, and a tap turns auto-approve off. The permission chip
+/// itself never comes here: it keeps its place above the composer.
 class StripRiskChip extends StatefulWidget {
   const StripRiskChip({
     super.key,
@@ -141,20 +124,6 @@ class StripRiskChip extends StatefulWidget {
         onTap: onDisable,
         closes: true,
       );
-
-  /// 「⚠ 自动审查」: a tap opens the conversation's permissions.
-  factory StripRiskChip.permission(
-    BuildContext context, {
-    Key? key,
-    required String preset,
-    required VoidCallback onTap,
-  }) => StripRiskChip(
-    key: key,
-    icon: AppIcons.permissionRisky,
-    label: permissionName(preset),
-    semanticsLabel: context.l10n.nearbyPermissionPill(permissionName(preset)),
-    onTap: onTap,
-  );
 
   final IconData icon;
   final String label;

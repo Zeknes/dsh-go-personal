@@ -76,7 +76,7 @@ Question cards: pick an answer, or tap **Other answer** to write your own, then 
 
 Approval cards: check the command, files and reason, then tap **Allow once** or **Decline**.
 
-**Allow for chat** approves ordinary tool approvals for the rest of this chat, including requests already waiting. **Auto-approving** appears above the composer; tap it to turn it off. Approvals are asked again after the app restarts. A chat with **Full access** or **Auto review** also shows a capsule above the composer; tap it to change the chat's permissions. To skip approvals in all new chats on this phone's engine, set the new-chat default to **Full access** under Permissions in [Settings](10-settings.md).
+**Allow for chat** approves ordinary tool approvals for the rest of this chat, including requests already waiting. **Auto-approving** appears above the composer; tap it to turn it off. Approvals are asked again after the app restarts. When the chat's permission isn't **Full access** — **Read only**, **Workspace write** or **Auto review** — the composer shows that preset; tap it to change the chat's permissions. **Full access** shows no such hint. To skip approvals in all new chats on this phone's engine, set the new-chat default to **Full access** under Permissions in [Settings](10-settings.md).
 
 ### Separate authorization for scheduled tasks
 

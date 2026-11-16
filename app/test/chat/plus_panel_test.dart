@@ -171,7 +171,7 @@ void main() {
   });
 
   group('本对话', () {
-    testWidgets('权限 shows the preset and opens its page; a pick runs /permission', (tester) async {
+    testWidgets('权限 shows the preset and opens its page; a pick runs /permission at once', (tester) async {
       final harness = await _openPanel(tester);
       final row = find.ancestor(of: find.text('权限'), matching: find.byType(ListPageRow));
       expect(find.descendant(of: row, matching: find.text('工作区内修改')), findsOneWidget);
@@ -181,20 +181,13 @@ void main() {
       expect(find.text('新对话默认：工作区内修改'), findsOneWidget);
       await tester.tap(find.text('仅可查看'));
       await tester.pumpAndSettle();
-      expect(find.text('切换为仅可查看？'), findsOneWidget);
-      await tester.tap(find.widgetWithText(TextButton, '取消'));
-      await tester.pumpAndSettle();
-      expect(harness.controllers['s1']?.commandLines ?? const <String>[], isEmpty);
-      await tester.tap(find.text('仅可查看'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, '确认'));
-      await pumpFrames(tester);
+      expect(find.byType(AlertDialog), findsNothing);
       expect(harness.controllers['s1']!.commandLines, ['/permission read-only']);
       // Now looser than the default would not be; 只读 is offered as default.
       expect(find.text('设为新对话默认'), findsOneWidget);
     });
 
-    testWidgets('完全权限 switches without confirmation', (tester) async {
+    testWidgets('完全权限 switches without confirmation either', (tester) async {
       final harness = await _openPanel(tester);
       await tester.tap(find.text('权限'));
       await pumpFrames(tester);
@@ -303,7 +296,7 @@ void main() {
         expect(pill.height, PermissionPillMetrics.height);
         expect(composer.top - pill.bottom, moreOrLessEquals(8, epsilon: 0.01));
         final lead = tester.getRect(
-          find.descendant(of: find.byType(PermissionPill), matching: find.byIcon(AppIcons.permissionRisky)),
+          find.descendant(of: find.byType(PermissionPill), matching: find.byIcon(AppIcons.permissions)),
         );
         final trail = tester.getRect(
           find
@@ -329,13 +322,13 @@ void main() {
       expect(find.text('本对话的权限'), findsOneWidget);
     });
 
-    testWidgets('while a reply generates: 自动审查 moves beside the strip, 完全权限 shows nothing', (tester) async {
+    testWidgets('while a reply generates only 自动允许中 moves beside the strip; permission chips stay put', (tester) async {
       await pumpChat(
         tester,
-        const SessionModes(preset: 'auto'),
+        const SessionModes(preset: 'workspace-write'),
         state: const ChatState(loading: false, running: true),
       );
-      expect(find.byType(StripRiskChip), findsOneWidget);
+      expect(find.byType(StripRiskChip), findsNothing);
       expect(find.byType(PermissionPill), findsNothing);
 
       await tester.pumpWidget(const SizedBox.shrink());
@@ -345,6 +338,7 @@ void main() {
         state: const ChatState(loading: false, running: true),
       );
       expect(find.byType(StripRiskChip), findsNothing);
+      expect(find.byType(PermissionPill), findsNothing);
     });
 
     testWidgets('自动允许中 wins while this client allows everything', (tester) async {

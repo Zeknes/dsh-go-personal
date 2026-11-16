@@ -21,7 +21,6 @@ import '../../state/engine_control.dart';
 import '../../state/hosts_state.dart';
 import '../../state/phone_state.dart';
 import '../common/ask_ai.dart';
-import '../common/app_dialog.dart';
 import '../common/list_page_row.dart';
 import '../common/risk_notice.dart';
 import '../phone/phone_control_screen.dart' show PhoneConfirmModeText;
@@ -55,22 +54,6 @@ Future<String?> writePermissionDefault(WidgetRef ref, DshClient client, String v
   }
 }
 
-Future<bool> confirmPermission(BuildContext context, String value) async {
-  if (value == 'danger-full-access') return true;
-  final l10n = context.l10n;
-  return await showAppDialog<bool>(
-        context: context,
-        builder: (dialog) => AlertDialog(
-          title: Text(l10n.featuresPermissionChangeTitle(permissionName(value))),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(dialog, false), child: Text(l10n.commonCancel)),
-            FilledButton(onPressed: () => Navigator.pop(dialog, true), child: Text(l10n.commonConfirm)),
-          ],
-        ),
-      ) ??
-      false;
-}
-
 class PermissionPage extends ConsumerStatefulWidget {
   const PermissionPage({super.key, this.sessionId});
 
@@ -84,26 +67,13 @@ class PermissionPage extends ConsumerStatefulWidget {
 
 class _PermissionPageState extends ConsumerState<PermissionPage> {
   bool _busy = false;
-  bool _confirming = false;
 
   void _toast(String text) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(text)));
-
-  Future<bool> _confirm(String value) async {
-    if (_confirming) return false;
-    _confirming = true;
-    try {
-      return await confirmPermission(context, value);
-    } finally {
-      _confirming = false;
-    }
-  }
 
   Future<void> _setCurrent(String value) async {
     final sessionId = widget.sessionId;
     final client = ref.read(activeConnectionProvider).value?.client;
-    final owner = ref.read(activeHostProvider);
     if (sessionId == null || client == null || _busy) return;
-    if (!await _confirm(value) || !mounted || ref.read(activeHostProvider) != owner || _busy) return;
     setState(() => _busy = true);
     try {
       final result = await client.setPermissionPreset(sessionId, value);
@@ -117,12 +87,10 @@ class _PermissionPageState extends ConsumerState<PermissionPage> {
   }
 
   Future<void> _setDefault(String value, int? revision) async {
-    final owner = ref.read(activeHostProvider);
     final client = ref.read(activeConnectionProvider).value?.client;
     final state = ref.read(permissionStateProvider(widget.sessionId)).value;
     final allowed = state?.defaultOptions ?? state?.options.where((o) => o.value != 'auto');
     if (client == null || _busy || revision == null || allowed?.any((o) => o.value == value) != true) return;
-    if (!await _confirm(value) || !mounted || ref.read(activeHostProvider) != owner || _busy) return;
     setState(() => _busy = true);
     try {
       final problem = await writePermissionDefault(ref, client, value, revision);

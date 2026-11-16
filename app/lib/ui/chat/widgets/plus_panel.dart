@@ -27,7 +27,6 @@ import '../../../plugins/native/native_state.dart';
 import '../../../state/chat_state.dart';
 import '../../../state/connection_state.dart';
 import '../../../state/features_state.dart';
-import '../../../state/hosts_state.dart';
 import '../../../state/phone_state.dart';
 import '../../../state/session_modes.dart';
 import '../../common/app_sheet.dart';
@@ -36,7 +35,7 @@ import '../../common/risk_notice.dart';
 import '../../common/sheet_navigator.dart';
 import '../../common/sheet_title_bar.dart';
 import '../../features/feature_format.dart';
-import '../../features/permission_page.dart' show confirmPermission, writePermissionDefault;
+import '../../features/permission_page.dart' show writePermissionDefault;
 import '../../phone/phone_control_screen.dart' show PhoneConfirmModeText;
 import '../../theme/app_icons.dart';
 import '../../theme/theme.dart';
@@ -348,23 +347,11 @@ class _SessionPermissionPageState extends ConsumerState<SessionPermissionPage> {
   /// Picked here and not yet in the log.
   String? _picked;
   bool _busy = false;
-  bool _confirming = false;
-
-  Future<bool> _confirm(String value) async {
-    if (_confirming) return false;
-    _confirming = true;
-    try {
-      return await confirmPermission(context, value);
-    } finally {
-      _confirming = false;
-    }
-  }
 
   void _toast(String text) => ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(text)));
 
   Future<void> _pick(String value, String? current) async {
     if (_busy || value == current) return;
-    if (!await _confirm(value) || !mounted || _busy) return;
     setState(() {
       _busy = true;
       _picked = value;
@@ -380,10 +367,8 @@ class _SessionPermissionPageState extends ConsumerState<SessionPermissionPage> {
   }
 
   Future<void> _makeDefault(String value, int revision) async {
-    final owner = ref.read(activeHostProvider);
     final client = ref.read(activeConnectionProvider).value?.client;
     if (client == null || _busy) return;
-    if (!await _confirm(value) || !mounted || ref.read(activeHostProvider) != owner || _busy) return;
     setState(() => _busy = true);
     final problem = await writePermissionDefault(ref, client, value, revision);
     if (!mounted) return;
@@ -440,8 +425,6 @@ class _SessionPermissionPageState extends ConsumerState<SessionPermissionPage> {
                     onTap: _busy ? null : () => unawaited(_pick(o.value, current)),
                     trailing: o.value == current
                         ? Icon(AppIcons.selected, size: 22, color: theme.colorScheme.primary)
-                        : o.value == 'danger-full-access'
-                        ? Icon(AppIcons.permissionRisky, size: 18, color: dsh.warning)
                         : const SizedBox.square(dimension: 22),
                   ),
                 ),

@@ -78,10 +78,7 @@ Future<void> _pick(WidgetTester tester, String chip, String row) async {
   await pumpFrames(tester, 6);
   await tester.tap(find.text(row).last);
   await pumpFrames(tester, 6);
-  if (find.byType(AlertDialog).evaluate().isNotEmpty) {
-    await tester.tap(find.widgetWithText(FilledButton, '确认'));
-    await pumpFrames(tester, 6);
-  }
+  expect(find.byType(AlertDialog), findsNothing);
 }
 
 Future<void> _send(WidgetTester tester, String text) async {
@@ -121,26 +118,25 @@ void main() {
     expect(find.text('Companion'), findsNothing);
   });
 
-  testWidgets('permission cancellation keeps the prior choice, including when returning to default', (tester) async {
+  testWidgets('a permission pick applies at once, with no dialog', (tester) async {
     final host = _Host();
     await _pump(tester, ChatHarness(newChatCatalogs: true), host);
     await tester.tap(find.text('工作区内修改'));
     await pumpFrames(tester, 6);
     await tester.tap(find.text('仅可查看').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, '取消'));
-    await tester.pumpAndSettle();
-    expect(_container(tester).read(pendingNewChatModesProvider).permission, isNull);
-    await _pick(tester, '工作区内修改', '仅可查看');
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(_container(tester).read(pendingNewChatModesProvider).permission, 'read-only');
+    expect(find.text('仅可查看'), findsOneWidget);
+
+    // Back to the Host default: the chip follows without a dialog either.
     await tester.tap(find.text('仅可查看'));
     await pumpFrames(tester, 6);
     await tester.tap(find.text('工作区内修改').last);
     await tester.pumpAndSettle();
-    expect(find.text('切换为工作区内修改？'), findsOneWidget);
-    await tester.tap(find.widgetWithText(TextButton, '取消'));
-    await tester.pumpAndSettle();
-    expect(_container(tester).read(pendingNewChatModesProvider).permission, 'read-only');
-    expect(find.text('仅可查看'), findsOneWidget);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(_container(tester).read(pendingNewChatModesProvider).permission, isNull);
+    expect(find.text('工作区内修改'), findsOneWidget);
   });
 
   testWidgets('a pick holds until the first send, which applies it before the prompt', (tester) async {

@@ -24,12 +24,9 @@ class SessionModes {
 
   /// The preset the chip above the composer names: every one but
   /// `danger-full-access` — 完全权限 is this app's ordinary setting on the
-  /// phone and carries no chip (设置 › 权限 still switches it). Null until the
-  /// log or the snapshot says.
+  /// phone and carries no persistent hint (设置 › 权限 still switches it).
+  /// Null until the log or the snapshot says.
   String? get chipPreset => preset == 'danger-full-access' ? null : preset;
-
-  /// `auto` is looser than 工作区内修改: its chip takes the warning tone.
-  bool get warns => preset == 'auto';
 
   @override
   bool operator ==(Object other) => other is SessionModes && other.preset == preset && other.plan == plan;

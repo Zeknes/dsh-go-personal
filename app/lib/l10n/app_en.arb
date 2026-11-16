@@ -2210,7 +2210,6 @@
   "featuresScheduleSummaryEnded": "Ended · Ran {time}",
   "featuresJobElapsed": "Running for {span}",
   "featuresJobDuration": "Took {span}",
-  "featuresPermissionChangeTitle": "Switch to {mode}?",
   "featuresPermissionReadOnly": "Read only",
   "featuresPermissionWorkspaceWrite": "Workspace write",
   "featuresPermissionFullAccess": "Full access",

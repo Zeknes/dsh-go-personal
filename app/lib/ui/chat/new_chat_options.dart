@@ -23,7 +23,6 @@ import '../common/app_sheet.dart';
 import '../common/list_page_row.dart';
 import '../common/sheet_title_bar.dart';
 import '../features/feature_format.dart';
-import '../features/permission_page.dart' show confirmPermission;
 import '../theme/app_icons.dart';
 import 'empty_actions.dart';
 
@@ -223,9 +222,7 @@ class NewChatOptions extends ConsumerWidget {
           for (final option in state.options)
             _Choice(
               value: option.value,
-              icon: option.value == 'danger-full-access' || option.value == 'auto'
-                  ? AppIcons.securityWarning
-                  : AppIcons.permissions,
+              icon: AppIcons.permissions,
               title: permissionName(option.value, option.name),
               subtitle: permissionHint(option.value, option.description),
               meta: option.value == fallback ? sheet.l10n.viewNewChatDefault : null,
@@ -235,8 +232,6 @@ class NewChatOptions extends ConsumerWidget {
       ),
     );
     if (pick == null || pick == selected || !context.mounted || !current()) return;
-    if (!await confirmPermission(context, pick)) return;
-    if (!context.mounted || !current()) return;
     ref.read(pendingNewChatModesProvider.notifier).selectPermission(pick == fallback ? null : pick);
   }
 }

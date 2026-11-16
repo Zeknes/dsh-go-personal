@@ -17,16 +17,18 @@ import '../shell/golden_harness.dart' show FakeRuntime, runningStatus;
 
 void main() {
   for (final surface in ['settings', 'session']) {
-    for (final scenario in ['switch to local', 'same remote', 'same local']) {
-      testWidgets('permission default confirmation: $surface / $scenario', (tester) async {
+    for (final remote in [true, false]) {
+      testWidgets('permission default: $surface on ${remote ? 'a remote host' : 'this phone'}, at once and no dialog', (
+        tester,
+      ) async {
         SharedPreferences.setMockInitialValues({'auto_approve_commands': false});
         usePhoneView(tester);
         final remoteCarrier = FakePluginCarrier();
         final localCarrier = FakePluginCarrier();
-        final remote = DshClient.withCarrier(remoteCarrier);
-        final local = DshClient.withCarrier(localCarrier);
-        addTearDown(remote.close);
-        addTearDown(local.close);
+        final remoteClient = DshClient.withCarrier(remoteCarrier);
+        final localClient = DshClient.withCarrier(localCarrier);
+        addTearDown(remoteClient.close);
+        addTearDown(localClient.close);
         for (final carrier in [remoteCarrier, localCarrier]) {
           carrier.handlers['settings/describe'] = (_) => {
             'writable': true,
@@ -66,8 +68,8 @@ void main() {
                 final host = ref.watch(activeHostProvider);
                 return AsyncData(
                   host.kind == HostKind.local
-                      ? HostConnection(client: local, isLocal: true)
-                      : HostConnection(client: remote, isLocal: false, kind: HostKind.ssh, hostId: 'pc'),
+                      ? HostConnection(client: localClient, isLocal: true)
+                      : HostConnection(client: remoteClient, isLocal: false, kind: HostKind.ssh, hostId: 'pc'),
                 );
               }),
               localRuntimeProvider.overrideWith(
@@ -79,33 +81,21 @@ void main() {
         final container = ProviderScope.containerOf(
           tester.element(find.byType(surface == 'settings' ? PermissionPage : SessionPermissionPage)),
         );
-        if (scenario != 'same local') container.read(activeHostProvider.notifier).select(const HostRef.ssh('pc'));
+        container.read(activeHostProvider.notifier).select(remote ? const HostRef.ssh('pc') : HostRef.local);
         await tester.pumpAndSettle();
         expect(container.read(settingsProvider).autoApproveCommands, isFalse);
+
         await tester.tap(find.text(surface == 'settings' ? '仅可查看' : '设为新对话默认').last);
         await tester.pumpAndSettle();
-        expect(find.text('切换为仅可查看？'), findsOneWidget);
-        if (scenario == 'switch to local') {
-          tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-          tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
-          tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-          container.read(activeHostProvider.notifier).select(HostRef.local);
-          tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
-          tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-          tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-          await tester.pumpAndSettle();
-          expect(find.text('切换为仅可查看？'), findsOneWidget);
-          expect(container.read(activeConnectionProvider).value!.client, same(local));
-        }
-        await tester.tap(find.widgetWithText(FilledButton, '确认'));
-        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsNothing);
+
         final prefs = await SharedPreferences.getInstance();
         expect(
           [container.read(settingsProvider).autoApproveCommands, prefs.getBool('auto_approve_commands') ?? false],
           [false, false],
         );
-        expect(remoteCarrier.argsOf('settings/mutate').length, scenario == 'same remote' ? 1 : 0);
-        expect(localCarrier.argsOf('settings/mutate').length, scenario == 'same local' ? 1 : 0);
+        expect(remoteCarrier.argsOf('settings/mutate').length, remote ? 1 : 0);
+        expect(localCarrier.argsOf('settings/mutate').length, remote ? 0 : 1);
         expect(tester.takeException(), isNull);
       });
     }

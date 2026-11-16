@@ -259,7 +259,7 @@ void main() {
         expect(exit.center.dy, moreOrLessEquals(capsule.center.dy, epsilon: 0.01));
       });
 
-      testWidgets('with the permission chip: a 34 round ⚠ first, the capsule 8 after it, both one height (×$scale)', (
+      testWidgets('with the permission chip: a 34 round glyph first, the capsule 8 after it, both one height (×$scale)', (
         tester,
       ) async {
         await pumpGenerate(
@@ -277,7 +277,7 @@ void main() {
         expect(capsule.top, pill.top);
         expect(capsule.height, pill.height);
         final glyph = tester.getRect(
-          find.descendant(of: find.byType(PermissionPill), matching: find.byIcon(AppIcons.permissionRisky)),
+          find.descendant(of: find.byType(PermissionPill), matching: find.byIcon(AppIcons.permissions)),
         );
         expect(glyph.center.dx, moreOrLessEquals(pill.center.dx, epsilon: 0.01));
         expect(glyph.center.dy, moreOrLessEquals(pill.center.dy, epsilon: 0.01));
@@ -470,7 +470,7 @@ void main() {
   group('goldens', () {
     for (final brightness in Brightness.values) {
       final suffix = brightness.name;
-      testWidgets('capsule beside the permission ⚠ ($suffix)', (tester) async {
+      testWidgets('capsule beside the permission chip ($suffix)', (tester) async {
         await pumpGenerate(
           tester,
           modes: const SessionModes(preset: 'auto'),

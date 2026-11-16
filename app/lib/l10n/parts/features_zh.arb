@@ -100,8 +100,6 @@
       }
     }
   },
-  "featuresPermissionChangeTitle": "切换为{mode}？",
-  "@featuresPermissionChangeTitle": {"placeholders": {"mode": {"type": "String"}}},
   "featuresPermissionReadOnly": "仅可查看",
   "featuresPermissionWorkspaceWrite": "工作区内修改",
   "featuresPermissionFullAccess": "完全权限",
