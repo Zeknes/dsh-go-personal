@@ -60,6 +60,7 @@ class SubagentNode {
     this.title,
     this.timing,
     this.createdAt,
+    this.updatedAt,
     this.children = const [],
   });
 
@@ -74,7 +75,14 @@ class SubagentNode {
   /// The child's own session title, when it differs from [label].
   final String? title;
   final SubagentTiming? timing;
+
+  /// When the parent's catalog recorded the dispatch; null for a child the
+  /// catalog does not name.
   final DateTime? createdAt;
+
+  /// The Host's `updatedAt` for the child: the later of its creation and its
+  /// last prompt (dispatch or continuation), read from the session list.
+  final DateTime? updatedAt;
   final List<SubagentNode> children;
 
   /// External tasks have no local conversation.
@@ -102,9 +110,156 @@ AgentRunState _stateOf(SessionSummary? summary) {
   };
 }
 
-/// The direct children of [parentId] (and theirs, recursively): the parent's
-/// catalog first, in creation order, then listed children the catalog does
-/// not name yet.
+// -----------------------------------------------------------------------------
+// Display order
+
+/// How a node ranks against its siblings: work in progress first, then the
+/// ones that ended badly (few, and worth acting on), then the ones that
+/// finished, then everything else. `idle` says nothing failed — it means no
+/// turn has closed yet, the state is unknown, or the task is external.
+int lineageStateRank(AgentRunState state) => switch (state) {
+  AgentRunState.running => 0,
+  AgentRunState.failed => 1,
+  AgentRunState.completed => 2,
+  AgentRunState.idle => 3,
+};
+
+DateTime? _moment(DateTime? time) => time == null || time.millisecondsSinceEpoch <= 0 ? null : time;
+
+/// The Host's own time for this node's last change a person caused: the prompt
+/// that dispatched or continued it, or the start of a turn still open. The
+/// Host records no end time, so a finished node's value is its last prompt —
+/// not when it finished — and a node with neither falls back to its catalog
+/// creation time.
+DateTime? lineageActivity(SubagentNode node) {
+  DateTime? newest;
+  for (final mark in [_moment(node.updatedAt), if (node.running) _moment(node.timing?.activeSince)]) {
+    if (mark == null) continue;
+    if (newest == null || mark.isAfter(newest)) newest = mark;
+  }
+  return newest ?? _moment(node.createdAt);
+}
+
+/// The best rank in the subtree: a running grandchild lifts its ancestors so
+/// the tree stays whole instead of exposing a child above a hidden parent.
+int _subtreeRank(SubagentNode node) {
+  var best = lineageStateRank(node.state);
+  for (final child in node.children) {
+    final rank = _subtreeRank(child);
+    if (rank < best) best = rank;
+  }
+  return best;
+}
+
+DateTime? _subtreeActivity(SubagentNode node) {
+  var newest = lineageActivity(node);
+  for (final child in node.children) {
+    final at = _subtreeActivity(child);
+    if (at != null && (newest == null || at.isAfter(newest))) newest = at;
+  }
+  return newest;
+}
+
+/// Display order among siblings: state rank, then the newest activity, then
+/// the newest dispatch, then the id — so equal rows never swap between builds.
+int compareLineage(SubagentNode a, SubagentNode b) {
+  final rank = _subtreeRank(a).compareTo(_subtreeRank(b));
+  if (rank != 0) return rank;
+  final at = _subtreeActivity(a);
+  final bt = _subtreeActivity(b);
+  if (at != null && bt != null) {
+    final byActivity = bt.compareTo(at);
+    if (byActivity != 0) return byActivity;
+  } else if (at != null) {
+    return -1;
+  } else if (bt != null) {
+    return 1;
+  }
+  final ac = _moment(a.createdAt);
+  final bc = _moment(b.createdAt);
+  if (ac != null && bc != null) {
+    final byCreated = bc.compareTo(ac);
+    if (byCreated != 0) return byCreated;
+  } else if (ac != null) {
+    return -1;
+  } else if (bc != null) {
+    return 1;
+  }
+  return a.id.compareTo(b.id);
+}
+
+/// [nodes] as siblings in display order; children keep their own order.
+List<SubagentNode> orderLineage(List<SubagentNode> nodes) => [...nodes]..sort(compareLineage);
+
+/// One visible row: a node and how deep it sits under the conversation.
+class LineageRow {
+  const LineageRow(this.node, {this.depth = 0});
+
+  final SubagentNode node;
+  final int depth;
+}
+
+/// Every row of the trees in [nodes], depth first.
+List<LineageRow> lineageRows(List<SubagentNode> nodes) {
+  final rows = <LineageRow>[];
+  void add(SubagentNode node, int depth) {
+    rows.add(LineageRow(node, depth: depth));
+    for (final child in node.children) {
+      add(child, depth + 1);
+    }
+  }
+
+  for (final node in nodes) {
+    add(node, 0);
+  }
+  return rows;
+}
+
+/// How many rows the whole lineage has, nested ones included.
+int lineageSize(List<SubagentNode> nodes) {
+  var count = 0;
+  for (final node in nodes) {
+    count += node.flattened.length;
+  }
+  return count;
+}
+
+/// Rows a conversation's lineage shows before it is expanded: the recent ones,
+/// and always every running one (a long session keeps its history, but the
+/// open sheet starts with what is happening).
+const recentLineageLimit = 20;
+
+/// The rows to show: all of them when [expanded] or when the lineage is short,
+/// otherwise a leading slice that includes every running node; with [query],
+/// every node matching it (label, title or id, case-insensitive), flattened.
+List<LineageRow> visibleLineage(
+  List<SubagentNode> nodes, {
+  String query = '',
+  bool expanded = false,
+  int limit = recentLineageLimit,
+}) {
+  final needle = query.trim().toLowerCase();
+  if (needle.isNotEmpty) {
+    return [
+      for (final node in nodes.expand((n) => n.flattened))
+        if (node.label.toLowerCase().contains(needle) ||
+            (node.title?.toLowerCase().contains(needle) ?? false) ||
+            node.id.toLowerCase().contains(needle))
+          LineageRow(node),
+    ];
+  }
+  final rows = lineageRows(nodes);
+  if (expanded || rows.length <= limit) return rows;
+  var count = limit < 0 ? 0 : limit;
+  for (var i = count; i < rows.length; i++) {
+    if (rows[i].node.running) count = i + 1;
+  }
+  return rows.sublist(0, count.clamp(0, rows.length));
+}
+
+/// The direct children of [parentId] (and theirs, recursively), in display
+/// order: the parent's catalog plus listed children the catalog does not name
+/// yet, siblings ordered by [orderLineage].
 List<SubagentNode> buildLineage(
   String parentId,
   Map<String, SessionSummary> sessions, {
@@ -138,7 +293,7 @@ List<SubagentNode> _buildLineage(
   final extra = [
     for (final s in childrenByParent[parentId] ?? const <SessionSummary>[])
       if (!named.contains(s.sessionId)) s,
-  ]..sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
+  ];
   for (final s in extra) {
     final identity = s.projections.subagentIdentity;
     entries.add(
@@ -163,11 +318,12 @@ List<SubagentNode> _buildLineage(
         title: title == null || title.isEmpty || title == label ? null : title,
         timing: summary?.projections.subagentTiming,
         createdAt: entry.createdAt,
+        updatedAt: summary?.updatedAt,
         children: _buildLineage(entry.id, sessions, childrenByParent, depth + 1, visited),
       ),
     );
   }
-  return nodes;
+  return orderLineage(nodes);
 }
 
 /// The lineage under one conversation.

@@ -23,18 +23,22 @@ ProviderContainer _container(Map<String, SessionSummary> sessions) {
 
 void main() {
   group('lineage', () {
-    test('catalog order, states, modes and the nested child', () {
+    test('states, modes and the nested child, running first', () {
       final nodes = buildLineage(parentId, sampleAgentSessions());
-      expect(nodes.map((n) => n.label), ['审查改动', '补连点的测试', '查 CI 日志']);
-      expect(nodes.map((n) => n.state), [AgentRunState.completed, AgentRunState.running, AgentRunState.failed]);
-      expect(nodes[2].mode, SubagentMode.oneShot);
-      expect(nodes.first.title, 'Review the login fix');
-      expect(nodes.first.timing!.total, const Duration(seconds: 83));
-      expect(nodes.first.children.single.label, '对照官方文档');
-      expect(nodes.first.children.single.parentId, reviewerId);
-      expect(nodes.first.flattened.length, 2);
-      expect(nodes[1].children, isEmpty);
-      expect(nodes[1].address.toJson(), {
+      SubagentNode byId(String id) => nodes.firstWhere((n) => n.id == id);
+      // Running, then the one that ended badly, then the finished one.
+      expect(nodes.map((n) => n.id), [testsId, brokenId, reviewerId]);
+      expect(byId(testsId).state, AgentRunState.running);
+      expect(byId(brokenId).state, AgentRunState.failed);
+      expect(byId(reviewerId).state, AgentRunState.completed);
+      expect(byId(brokenId).mode, SubagentMode.oneShot);
+      expect(byId(reviewerId).title, 'Review the login fix');
+      expect(byId(reviewerId).timing!.total, const Duration(seconds: 83));
+      expect(byId(reviewerId).children.single.label, '对照官方文档');
+      expect(byId(reviewerId).children.single.parentId, reviewerId);
+      expect(byId(reviewerId).flattened.length, 2);
+      expect(byId(testsId).children, isEmpty);
+      expect(byId(testsId).address.toJson(), {
         'kind': 'subagent',
         'parentSessionId': parentId,
         'childSessionId': testsId,
@@ -44,9 +48,10 @@ void main() {
 
     test('listed children the catalog does not name yet still show', () {
       final sessions = sampleAgentSessions();
+      // Dispatched later than the others: the newest assignment leads.
       sessions['late'] = SessionSummary(
         sessionId: 'late',
-        updatedAt: agentsNow,
+        updatedAt: agentsNow.add(const Duration(minutes: 1)),
         running: true,
         blank: false,
         agentAvailable: true,
@@ -57,8 +62,8 @@ void main() {
         }),
       );
       final nodes = buildLineage(parentId, sessions);
-      expect(nodes.last.label, '刚派出去');
-      expect(nodes.last.running, isTrue);
+      expect(nodes.first.label, '刚派出去');
+      expect(nodes.first.running, isTrue);
       // No catalog and no identity: a generic name, never an empty row.
       expect(
         buildLineage('nobody', {
@@ -93,7 +98,7 @@ void main() {
         }),
       );
       final nodes = buildLineage(parentId, sessions);
-      expect(nodes.first.children.single.children, isEmpty);
+      expect(nodes.firstWhere((n) => n.id == reviewerId).children.single.children, isEmpty);
     });
   });
 

@@ -2003,6 +2003,23 @@ class L10nEn extends L10n {
   }
 
   @override
+  String botsSubagentsShowAll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Show all $count',
+      one: 'Show the 1 subagent',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get botsSubagentsSearch => 'Search subagents';
+
+  @override
+  String get botsSubagentsNoMatch => 'No subagent matches';
+
+  @override
   String botsBackToParent(String title) {
     return 'Back to “$title”';
   }

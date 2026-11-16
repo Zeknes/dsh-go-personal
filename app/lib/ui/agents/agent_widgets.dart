@@ -266,8 +266,9 @@ class SubagentRow extends StatelessWidget {
   }
 }
 
-/// 一棵谱系:直接下级在前,下级的下级缩进跟在各自下面(都展开;默认委派深度
-/// 只有一层,深树很少见)。
+/// A tree: the most recent rows of its lineage, every running one included,
+/// nested levels indented under their parent. With [onToggleExpanded] the card
+/// ends with a row that shows the rest or folds back.
 class SubagentTreeCard extends StatelessWidget {
   const SubagentTreeCard({
     super.key,
@@ -276,6 +277,8 @@ class SubagentTreeCard extends StatelessWidget {
     this.currentId,
     this.onOpen,
     this.margin = const EdgeInsets.fromLTRB(16, 0, 16, 0),
+    this.expanded = false,
+    this.onToggleExpanded,
   });
 
   final List<SubagentNode> nodes;
@@ -283,26 +286,51 @@ class SubagentTreeCard extends StatelessWidget {
   final String? currentId;
   final ValueChanged<SubagentNode>? onOpen;
   final EdgeInsetsGeometry margin;
+  final bool expanded;
+  final VoidCallback? onToggleExpanded;
 
   @override
   Widget build(BuildContext context) {
-    final rows = <Widget>[];
-    void add(SubagentNode node, int depth) {
-      rows.add(
-        FadeSlideIn(
-          index: rows.length,
-          child: SubagentRow(node: node, depth: depth, current: node.id == currentId, onOpen: onOpen),
-        ),
-      );
-      for (final child in node.children) {
-        add(child, depth + 1);
-      }
-    }
+    final rows = visibleLineage(nodes, expanded: expanded);
+    final total = lineageSize(nodes);
+    final hidden = total - rows.length;
+    return ListPageCard(
+      title: title,
+      margin: margin,
+      children: [
+        for (final (i, row) in rows.indexed)
+          FadeSlideIn(
+            key: ValueKey(row.node.id),
+            index: i,
+            child: SubagentRow(node: row.node, depth: row.depth, current: row.node.id == currentId, onOpen: onOpen),
+          ),
+        if (onToggleExpanded != null && (hidden > 0 || expanded && total > recentLineageLimit))
+          LineageCountRow(
+            total: total,
+            expanded: expanded,
+            onTap: onToggleExpanded!,
+          ),
+      ],
+    );
+  }
+}
 
-    for (final node in nodes) {
-      add(node, 0);
-    }
-    return ListPageCard(title: title, margin: margin, children: rows);
+/// The last row of a capped lineage: 「显示全部 N 个」 or 「收起」.
+class LineageCountRow extends StatelessWidget {
+  const LineageCountRow({super.key, required this.total, required this.expanded, required this.onTap});
+
+  final int total;
+  final bool expanded;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return ListPageRow(
+      title: expanded ? l10n.commonCollapse : l10n.botsSubagentsShowAll(total),
+      onTap: onTap,
+      chevron: true,
+    );
   }
 }
 

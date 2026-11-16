@@ -38,7 +38,8 @@ void main() {
   test('wide lineage scans the session snapshot once, including leaf nodes', () {
     final sessions = _CountedSessions(_wide(200));
     final nodes = buildLineage('root', sessions);
-    expect(nodes.map((n) => n.id), [for (var i = 0; i < 200; i++) 'child-$i']);
+    // Newest Host-recorded change first.
+    expect(nodes.map((n) => n.id), [for (var i = 199; i >= 0; i--) 'child-$i']);
     expect(nodes.every((n) => n.children.isEmpty), isTrue);
     expect(sessions.rowsVisited, lessThanOrEqualTo(sessions.length));
   });
@@ -53,10 +54,12 @@ void main() {
       ],
     );
     final nodes = buildLineage('root', sessions);
-    expect(nodes.map((n) => n.id), ['child-2', 'missing', 'child-0', 'child-1', 'child-3']);
-    expect(nodes.first.label, 'first');
-    expect(nodes[1].openable, isFalse);
-    expect(nodes[1].state, AgentRunState.idle);
+    // Newest first; a row the snapshot does not hold has no time and goes last.
+    expect(nodes.map((n) => n.id), ['child-3', 'child-2', 'child-1', 'child-0', 'missing']);
+    expect(nodes.firstWhere((n) => n.id == 'child-2').label, 'first');
+    final external = nodes.firstWhere((n) => n.id == 'missing');
+    expect(external.openable, isFalse);
+    expect(external.state, AgentRunState.idle);
   });
   test('depth and caller supplied seen set retain traversal boundaries', () {
     final sessions = <String, SessionSummary>{
@@ -89,7 +92,7 @@ void main() {
         final nodes = buildLineage('root', sessions);
         watch.stop();
         samples.add(watch.elapsedMicroseconds);
-        expect(nodes.map((n) => n.id), [for (var j = 0; j < count; j++) 'child-$j']);
+        expect(nodes.map((n) => n.id), [for (var j = count - 1; j >= 0; j--) 'child-$j']);
       }
       final sorted = [...samples]..sort();
       // Component timing, not a frame, ANR or memory claim.

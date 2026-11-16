@@ -3566,6 +3566,24 @@ abstract class L10n {
   /// **'含 {count} 个下级'**
   String botsNestedCount(int count);
 
+  /// No description provided for @botsSubagentsShowAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示全部 {count} 个'**
+  String botsSubagentsShowAll(int count);
+
+  /// No description provided for @botsSubagentsSearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索子代理'**
+  String get botsSubagentsSearch;
+
+  /// No description provided for @botsSubagentsNoMatch.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有匹配的子代理'**
+  String get botsSubagentsNoMatch;
+
   /// No description provided for @botsBackToParent.
   ///
   /// In zh, this message translates to:
