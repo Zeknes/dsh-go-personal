@@ -144,6 +144,14 @@ void main() {
     expect(tester.widgetList(find.byType(SubagentRow)).length, lessThan(60));
   });
 
+  testWidgets('five thousand children: the same screenful, the same one row to expand', (tester) async {
+    await _pump(tester, _wide(5000));
+    expect(_visibleIds(tester).length, lessThan(60));
+    expect(find.text('5000 个子代理'), findsOneWidget);
+    await _scrollTo(tester, find.byType(LineageCountRow));
+    expect(find.text('显示全部 5000 个'), findsOneWidget);
+  });
+
   testWidgets('expanding reaches the 900th child, still a screenful at a time', (tester) async {
     await _pump(tester, _wide(1000));
     await _scrollTo(tester, find.byType(LineageCountRow));
