@@ -170,6 +170,25 @@ AgentActivity foldActivity(AgentActivity? prev, {int seq = -1, bool? running, Su
   return next;
 }
 
+/// What this launch saw ([live]) with the facts a previous launch remembered
+/// underneath: a list row that carries no end time does not erase an end the
+/// app watched before it went away.
+AgentActivity mergeActivity(AgentActivity live, AgentActivity remembered) {
+  final liveEnded = live.lastEndedAt;
+  final rememberedEnded = remembered.lastEndedAt;
+  final useRememberedEnd =
+      liveEnded == null || (rememberedEnded != null && rememberedEnded.isAfter(liveEnded));
+  return AgentActivity(
+    seq: live.seq >= remembered.seq ? live.seq : remembered.seq,
+    running: live.running,
+    turnStart: live.turnStart ?? remembered.turnStart,
+    // The event clock belongs to whichever turn this launch knows about.
+    lastEventAt: live.turnStart != null ? live.lastEventAt : remembered.lastEventAt,
+    lastEndedAt: useRememberedEnd ? rememberedEnded : liveEnded,
+    lastTurnCompleted: useRememberedEnd ? remembered.lastTurnCompleted : live.lastTurnCompleted,
+  );
+}
+
 /// Everything the app remembers, keyed by child session id.
 typedef AgentActivityMap = Map<String, AgentActivity>;
 
@@ -215,14 +234,13 @@ AgentActivityMap decodeActivity(String? text) {
 /// Child session activity of the active Host, kept current by `session/list`
 /// rows and `session/control` frames and remembered across launches.
 ///
-/// [state] is what the app knows now; records loaded from the last launch are
-/// underneath it, so a child that finished while the app was away still shows
-/// the end time the app saw before it went.
+/// Records loaded from the last launch are merged under what this connection
+/// sees, so a child that finished while the app was away still shows the end
+/// time the app saw before it went.
 class AgentActivityController extends Notifier<AgentActivityMap> {
   static const prefsKey = 'agent_activity_v1';
 
   final AgentActivityMap _records = {};
-  AgentActivityMap _remembered = const {};
   Future<void>? _loaded;
   Timer? _save;
 
@@ -251,10 +269,7 @@ class AgentActivityController extends Notifier<AgentActivityMap> {
     return _merged();
   }
 
-  AgentActivityMap _merged() => {
-    ..._remembered,
-    ..._records,
-  };
+  AgentActivityMap _merged() => Map.unmodifiable(_records);
 
   /// Folds one `session/list` snapshot: a child row's status, and its timing
   /// when the row carries `subagentTiming`.
@@ -265,7 +280,7 @@ class AgentActivityController extends Notifier<AgentActivityMap> {
       final timing = row.projections.subagentTiming;
       if (timing == null && !row.running) continue;
       final next = foldActivity(
-        _records[row.sessionId] ?? _remembered[row.sessionId],
+        _records[row.sessionId],
         seq: row.projections.asOfSeq,
         running: row.running,
         timing: timing,
@@ -303,7 +318,7 @@ class AgentActivityController extends Notifier<AgentActivityMap> {
       _apply(sessionId, seq: seq, running: running, timing: timing);
 
   void _apply(String sessionId, {required int seq, bool? running, SubagentTiming? timing}) {
-    final before = _records[sessionId] ?? _remembered[sessionId];
+    final before = _records[sessionId];
     final next = foldActivity(before, seq: seq, running: running, timing: timing);
     if (next == before) return;
     _records[sessionId] = next;
@@ -324,8 +339,11 @@ class AgentActivityController extends Notifier<AgentActivityMap> {
 
   Future<void> _readStore() async {
     final loaded = await _loadStore();
-    if (!ref.mounted) return;
-    _remembered = loaded;
+    if (!ref.mounted || loaded.isEmpty) return;
+    for (final entry in loaded.entries) {
+      final live = _records[entry.key];
+      _records[entry.key] = live == null ? entry.value : mergeActivity(live, entry.value);
+    }
     state = _merged();
   }
 

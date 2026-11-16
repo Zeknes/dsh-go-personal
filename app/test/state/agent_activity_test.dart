@@ -101,6 +101,45 @@ void main() {
     });
   });
 
+  group('merge with the last launch', () {
+    AgentActivity closedAt(DateTime endedAt) => foldActivity(
+      foldActivity(
+        null,
+        seq: 90,
+        running: true,
+        timing: SubagentTiming(activeSince: endedAt.subtract(const Duration(minutes: 3)), activeThrough: endedAt),
+      ),
+      seq: 92,
+      running: false,
+      timing: SubagentTiming(settled: const Duration(minutes: 3), lastTurnCompleted: true),
+    );
+
+    test('a row without an end keeps the end the last launch saw', () {
+      // This launch only has the list row: outcome, no clock.
+      final live = foldActivity(null, seq: 92, running: false, timing: _closed(completed: true));
+      expect(live.lastEndedAt, isNull);
+
+      final merged = mergeActivity(live, closedAt(_at(9)));
+      expect(merged.lastEndedAt, _at(9));
+      expect(merged.lastTurnCompleted, isTrue);
+    });
+
+    test('a newer end from this launch wins over the remembered one', () {
+      final live = closedAt(_at(30));
+      final merged = mergeActivity(live, closedAt(_at(9)));
+      expect(merged.lastEndedAt, _at(30));
+    });
+
+    test('a continuation keeps this launch’s turn clock', () {
+      final live = foldActivity(null, seq: 200, running: true, timing: _open(40, 41));
+      final merged = mergeActivity(live, closedAt(_at(9)));
+      expect(merged.running, isTrue);
+      expect(merged.turnStart, _at(40));
+      expect(merged.lastEventAt, _at(41));
+      expect(merged.seq, 200);
+    });
+  });
+
   group('storage', () {
     test('round-trips through JSON', () {
       final records = {

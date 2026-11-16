@@ -96,6 +96,39 @@ void main() {
     expect(next.read(agentActivityProvider)['child-2']!.lastEndedAt, _endedAt);
   });
 
+  test('a list row of this launch does not drop the remembered end', () async {
+    SharedPreferences.setMockInitialValues({
+      AgentActivityController.prefsKey: encodeActivity({'child-4': _closedRecord(completed: true)}),
+    });
+    // The row the Host sends now has the outcome but no clock: it dropped the
+    // open turn when the turn ended.
+    final row = SessionSummary(
+      sessionId: 'child-4',
+      updatedAt: _endedAt.subtract(const Duration(minutes: 30)),
+      running: false,
+      blank: false,
+      agentAvailable: false,
+      parentSessionId: 'parent',
+      origin: 'subagent',
+      projections: const SessionProjections(92, {
+        'subagentTiming': {'settledMs': 240000, 'lastTurnCompleted': true},
+      }),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        activeConnectionProvider.overrideWithValue(const AsyncData<HostConnection?>(null)),
+        hostSessionsProvider.overrideWithValue({'child-4': row}),
+      ],
+    );
+    addTearDown(container.dispose);
+    container.read(agentActivityProvider);
+    await _settled();
+
+    final record = container.read(agentActivityProvider)['child-4']!;
+    expect(record.lastEndedAt, _endedAt);
+    expect(record.lastTurnCompleted, isTrue);
+  });
+
   test('what a later frame says wins over the remembered record', () async {
     final remembered = _closedRecord(completed: true);
     SharedPreferences.setMockInitialValues({
