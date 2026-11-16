@@ -151,3 +151,4 @@ piai-overflow-output-limit.diff
 personal-remove-telemetry.diff
 personal-remove-session-log.diff
 personal-remove-telemetry-registration.diff
+schedule-authorization-availability.diff
