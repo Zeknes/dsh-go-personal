@@ -6,7 +6,9 @@ When there's a lot to do, the AI can hand part of the work to subagents, or spli
 
 A subagent is a conversation the AI sends out from the current chat, with its own context and tools; the original chat is its parent. The chat header shows a **Subagents** capsule with how many were sent, and a dot on it breathes while any of them runs.
 
-Tap the capsule for the list: a lineage tree, each row naming the task and its state; tap a row to open that conversation. Open it when none were sent and it says **No subagents sent**.
+Tap the capsule for the list: a lineage tree, each row naming the task and its state; tap a row to open that conversation. Running subagents come first; the rest follow the last moment the Host really did something there, newest first — a finished subagent sorts by when it finished, not by when it was dispatched. Records without an end time on the Host (for example a turn that finished while the app was closed) fall back to the dispatch time. A chat that dispatched many of them lists the recent ones first, with **Show all** at the end for the whole history, and a search box to find one by task name or chat id. Open it when none were sent and it says **No subagents sent**.
+
+The Subagents tab in Chat details shows the same tree one page at a time: the recent page first, and “Show 50 more” adds a page per tap, so a chat with thousands of children is never drawn all at once.
 
 ## Finding subagents
 

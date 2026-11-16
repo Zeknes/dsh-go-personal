@@ -1887,6 +1887,22 @@ class L10nZh extends L10n {
   }
 
   @override
+  String botsSubagentsShowAll(int count) {
+    return '显示全部 $count 个';
+  }
+
+  @override
+  String botsSubagentsShowMore(int count) {
+    return '再显示 $count 个';
+  }
+
+  @override
+  String get botsSubagentsSearch => '搜索子代理';
+
+  @override
+  String get botsSubagentsNoMatch => '没有匹配的子代理';
+
+  @override
   String botsBackToParent(String title) {
     return '返回「$title」';
   }

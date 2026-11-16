@@ -5,7 +5,6 @@
 //
 //   flutter test --update-goldens test/agents/lineage_test.dart
 
-import 'package:dsh_app/state/agents_state.dart';
 import 'package:dsh_app/state/chat_state.dart';
 import 'package:dsh_app/state/sessions_state.dart';
 import 'package:dsh_app/state/workspace_state.dart';

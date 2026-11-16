@@ -1331,10 +1331,19 @@ class ContextTab extends ConsumerWidget {
 /// what each is doing; a row opens its own conversation, where it can be
 /// continued), then the dispatch log (what was asked, how long it took, how it
 /// went).
-class SubagentsTab extends ConsumerWidget {
+class SubagentsTab extends ConsumerStatefulWidget {
   const SubagentsTab({super.key, required this.sessionId});
 
   final String sessionId;
+
+  @override
+  ConsumerState<SubagentsTab> createState() => _SubagentsTabState();
+}
+
+class _SubagentsTabState extends ConsumerState<SubagentsTab> {
+  /// Rows of the lineage shown so far; 「再显示」 adds a page at a time, so a
+  /// conversation with thousands of children never builds them all at once.
+  int _limit = recentLineageLimit;
 
   void _open(BuildContext context, WidgetRef ref, SubagentNode node) {
     selectSubagent(ref, node.address);
@@ -1342,9 +1351,10 @@ class SubagentsTab extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     final dsh = DshColors.of(context);
+    final sessionId = widget.sessionId;
     final nodes = ref.watch(subagentLineageProvider(sessionId));
     final calls = ref
         .watch(
@@ -1381,7 +1391,13 @@ class SubagentsTab extends ConsumerWidget {
       padding: _listPadding(context),
       children: [
         if (nodes.isNotEmpty) ...[
-          SubagentTreeCard(title: lineageTitle(nodes), nodes: nodes, onOpen: (node) => _open(context, ref, node)),
+          SubagentTreeCard(
+            title: lineageTitle(nodes),
+            nodes: nodes,
+            limit: _limit,
+            onShowMore: () => setState(() => _limit += lineagePage),
+            onOpen: (node) => _open(context, ref, node),
+          ),
           if (calls.isNotEmpty) const SizedBox(height: 24),
         ],
         if (calls.isNotEmpty)
