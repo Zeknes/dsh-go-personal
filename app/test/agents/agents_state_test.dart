@@ -28,7 +28,7 @@ void main() {
     test('states, modes and the nested child, running first', () {
       final nodes = buildLineage(parentId, sampleAgentSessions());
       SubagentNode byId(String id) => nodes.firstWhere((n) => n.id == id);
-      // Running, then the one that ended badly, then the finished one.
+      // Running first; the rest share one group, ordered by time (equal here), then id.
       expect(nodes.map((n) => n.id), [testsId, brokenId, reviewerId]);
       expect(byId(testsId).state, AgentRunState.running);
       expect(byId(brokenId).state, AgentRunState.failed);

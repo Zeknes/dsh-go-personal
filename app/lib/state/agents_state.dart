@@ -131,15 +131,12 @@ class LineageActivity {
 // -----------------------------------------------------------------------------
 // Display order
 
-/// How a node ranks against its siblings: work in progress first, then the
-/// ones that ended badly (few, and worth acting on), then the ones that
-/// finished, then everything else. `idle` says nothing failed — it means no
-/// turn has closed yet, the state is unknown, or the task is external.
+/// Which of the two groups a node sits in: work in progress, then everything
+/// else. 未运行 and 已完成 share one group on purpose — a finished turn that is
+/// newer than an idle one outranks it by time, not by its state.
 int lineageStateRank(AgentRunState state) => switch (state) {
   AgentRunState.running => 0,
-  AgentRunState.failed => 1,
-  AgentRunState.completed => 2,
-  AgentRunState.idle => 3,
+  AgentRunState.failed || AgentRunState.completed || AgentRunState.idle => 1,
 };
 
 DateTime? _moment(DateTime? time) => time == null || time.millisecondsSinceEpoch <= 0 ? null : time;
@@ -176,8 +173,23 @@ int _subtreeRank(SubagentNode node) {
   return best;
 }
 
+/// The Host moment that orders a node inside its group: its newest event (a
+/// running turn's latest committed event, or the last one of a closed turn),
+/// else the prompt that dispatched or continued it. Creation time never orders
+/// rows — a row the Host never dated goes below the dated ones, by id.
+DateTime? _orderMoment(SubagentNode node) {
+  final live = node.live;
+  if (node.running) {
+    return _moment(live?.lastEventAt) ??
+        _moment(live?.turnStart) ??
+        _moment(node.timing?.activeSince) ??
+        _moment(node.updatedAt);
+  }
+  return _moment(live?.lastActivity) ?? _moment(node.updatedAt);
+}
+
 DateTime? _subtreeActivity(SubagentNode node) {
-  var newest = lineageActivity(node).time;
+  var newest = _orderMoment(node);
   for (final child in node.children) {
     final at = _subtreeActivity(child);
     if (at != null && (newest == null || at.isAfter(newest))) newest = at;
@@ -185,8 +197,9 @@ DateTime? _subtreeActivity(SubagentNode node) {
   return newest;
 }
 
-/// Display order among siblings: state rank, then the newest activity, then
-/// the newest dispatch, then the id — so equal rows never swap between builds.
+/// Display order among siblings: the group (running first, everything else
+/// after — 未运行 and 已完成 are not separated), then the newest valid update,
+/// then the id — so equal rows never swap between builds.
 int compareLineage(SubagentNode a, SubagentNode b) {
   final rank = _subtreeRank(a).compareTo(_subtreeRank(b));
   if (rank != 0) return rank;
@@ -198,16 +211,6 @@ int compareLineage(SubagentNode a, SubagentNode b) {
   } else if (at != null) {
     return -1;
   } else if (bt != null) {
-    return 1;
-  }
-  final ac = _moment(a.createdAt);
-  final bc = _moment(b.createdAt);
-  if (ac != null && bc != null) {
-    final byCreated = bc.compareTo(ac);
-    if (byCreated != 0) return byCreated;
-  } else if (ac != null) {
-    return -1;
-  } else if (bc != null) {
     return 1;
   }
   return a.id.compareTo(b.id);

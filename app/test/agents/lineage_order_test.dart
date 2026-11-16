@@ -1,6 +1,7 @@
-// The display order of a conversation's lineage: work in progress first, then
-// the newest Host-recorded change, with the tree kept whole. Pure functions, no
-// widgets: the sheet and the details tab both read this order.
+// The display order of a conversation's lineage: two groups only — work in
+// progress above, every other state together below — each ordered by the newest
+// Host-recorded change, with the tree kept whole. Pure functions, no widgets:
+// the sheet and the details tab both read this order.
 
 import 'package:dsh_app/state/agent_activity.dart';
 import 'package:dsh_app/state/agents_state.dart';
@@ -59,8 +60,8 @@ Map<String, SessionSummary> _tree(List<Map<String, Object?>> children, List<Sess
 }
 
 void main() {
-  group('state rank', () {
-    test('running, then failed, then completed, then the rest', () {
+  group('groups', () {
+    test('running always above; 未运行 and 已完成 share the second group', () {
       final nodes = buildLineage(
         parentId,
         _tree(
@@ -71,18 +72,67 @@ void main() {
             _entry('c-run', label: '运行'),
           ],
           [
-            _row('c-idle', updatedAt: agentsNow),
-            _row('c-done', lastTurnCompleted: true),
-            _row('c-bad', lastTurnCompleted: false),
+            _row('c-idle', updatedAt: agentsNow.subtract(const Duration(seconds: 10))),
+            _row('c-done', lastTurnCompleted: true, updatedAt: agentsNow.subtract(const Duration(seconds: 30))),
+            _row('c-bad', lastTurnCompleted: false, updatedAt: agentsNow.subtract(const Duration(seconds: 20))),
             _row('c-run', running: true, activeFor: const Duration(seconds: 20)),
           ],
         ),
       );
-      expect(nodes.map((n) => n.id), ['c-run', 'c-bad', 'c-done', 'c-idle']);
-      expect(nodes.last.state, AgentRunState.idle);
+      // Two groups only; the second one is ordered by time, not by state.
+      expect(nodes.map((n) => n.id), ['c-run', 'c-idle', 'c-bad', 'c-done']);
+      expect(nodes.map((n) => n.state), [
+        AgentRunState.running,
+        AgentRunState.idle,
+        AgentRunState.failed,
+        AgentRunState.completed,
+      ]);
+      expect(nodes.map((n) => lineageStateRank(n.state)), [0, 1, 1, 1]);
       // 「未运行」 is not a failure: no turn has closed, or the state is unknown.
-      expect(nodes.last.state, isNot(AgentRunState.failed));
-      expect(nodes.map((n) => lineageStateRank(n.state)), [0, 1, 2, 3]);
+      expect(nodes[1].state, isNot(AgentRunState.failed));
+    });
+
+    test('the second group interleaves failed, completed and idle by time', () {
+      final nodes = buildLineage(
+        parentId,
+        _tree(
+          [
+            _entry('failed'),
+            _entry('finished'),
+            _entry('idle'),
+            _entry('finished-old'),
+          ],
+          [
+            _row('failed', lastTurnCompleted: false, updatedAt: agentsNow.subtract(const Duration(minutes: 1))),
+            _row('finished', lastTurnCompleted: true, updatedAt: agentsNow.subtract(const Duration(minutes: 2))),
+            _row('idle', updatedAt: agentsNow.subtract(const Duration(minutes: 5))),
+            _row('finished-old', lastTurnCompleted: true, updatedAt: agentsNow.subtract(const Duration(minutes: 20))),
+          ],
+        ),
+      );
+      expect(nodes.map((n) => n.id), ['failed', 'finished', 'idle', 'finished-old']);
+      expect(nodes.map((n) => n.state), [
+        AgentRunState.failed,
+        AgentRunState.completed,
+        AgentRunState.idle,
+        AgentRunState.completed,
+      ]);
+    });
+
+    test('a long-running task still leads a finished one that updated just now', () {
+      final nodes = buildLineage(
+        parentId,
+        _tree(
+          [_entry('running'), _entry('just-finished')],
+          [
+            _row('running', running: true, activeFor: const Duration(hours: 1)),
+            _row('just-finished', lastTurnCompleted: true, updatedAt: agentsNow),
+          ],
+        ),
+      );
+      expect(nodes.map((n) => n.id), ['running', 'just-finished']);
+      expect(nodes.first.state, AgentRunState.running);
+      expect(nodes.last.state, AgentRunState.completed);
     });
 
     test('an external task stays idle even when its row is missing', () {
