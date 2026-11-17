@@ -174,8 +174,9 @@ class DshProcess(
 
         val hookConfig = File(rootfs, "root/.dsh/optional-feishu-agent.json")
         val hookEnabled = !safe && !direct && !tawc && try { OptionalGuestHook.enabled(hookConfig.takeIf { it.isFile }?.readText()) } catch (_: Exception) { false }
-        val hookArgv = if (hookEnabled) argv.dropLast(3) + listOf("/bin/sh", "-c", "exec ${OptionalGuestHook.path} supervise") else null
-        val hookStopArgv = if (hookEnabled) argv.dropLast(3) + listOf("/bin/sh", "-c", "exec ${OptionalGuestHook.path} stop") else null
+        val hookGeneration = java.util.UUID.randomUUID().toString()
+        val hookArgv = if (hookEnabled) argv.dropLast(3) + listOf("FEISHU_AGENTS_GUEST_GENERATION=$hookGeneration", "/bin/sh", "-c", "exec ${OptionalGuestHook.path} supervise") else null
+        val hookStopArgv = if (hookEnabled) argv.dropLast(3) + listOf("FEISHU_AGENTS_GUEST_GENERATION=$hookGeneration", "/bin/sh", "-c", "exec ${OptionalGuestHook.path} stop") else null
         val builder = ProcessBuilder(argv).directory(context.filesDir)
         val env = builder.environment()
         env.clear()
