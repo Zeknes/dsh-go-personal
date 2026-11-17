@@ -43,6 +43,8 @@
 | 远程 | 另开一条加密隧道（SSH 或 WebRTC/中继），复用同一个 DshClient | `packages/dsh_remote`、`remote/` |
 | 自更新 | 检查→下载→校验→安装（可走 Shizuku/ADB 特权） | `state/update_state.dart`、`update/`（Kotlin） |
 
+本机 PRoot 可选 FA 生命周期默认关闭。仅当 guest `/root/.dsh/optional-feishu-agent.json` 严格为 `{"enabled":true,"path":"/root/feishu-agents/instances/dsh-001/control.sh"}` 时，`DshProcess` 在 Web ready 后独立执行 `control.sh supervise`，停止 Web 前执行 `control.sh stop`。它不安装机器人、不修改 Web profile 或模型；安全模式、Direct 与 tawcroot 不启用。控制程序须以前台 supervisor 保持 PRoot 存活，并使用跨 tracer 可见的短 health socket，不能后台启动后退出 launcher。`OptionalGuestHook` 串行 ready/stop 并阻止重复或已停止的启动。
+
 ## 1. 仓库地图
 
 | 路径 | 是什么 | 关键入口 | 备注 |

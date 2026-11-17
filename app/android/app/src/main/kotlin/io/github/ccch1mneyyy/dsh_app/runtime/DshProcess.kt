@@ -44,6 +44,9 @@ class DshProcess(
     @Volatile private var stopping = false
     @Volatile private var expectedExit = false
     @Volatile private var readyReported = false
+    private val guestHook = OptionalGuestHook()
+    private var guestHookBuilder: ProcessBuilder? = null
+    private var guestHookStopBuilder: ProcessBuilder? = null
     private val startupSignal = CountDownLatch(1)
     @Volatile private var waiter: Thread? = null
     @Volatile private var stopper: Thread? = null
@@ -169,6 +172,10 @@ class DshProcess(
         }
         check(!safe || profileSelected) { "safe mode: this runtime's launch command has no `dsh web` to replace" }
 
+        val hookConfig = File(rootfs, "root/.dsh/optional-feishu-agent.json")
+        val hookEnabled = !safe && !direct && !tawc && try { OptionalGuestHook.enabled(hookConfig.takeIf { it.isFile }?.readText()) } catch (_: Exception) { false }
+        val hookArgv = if (hookEnabled) argv.dropLast(3) + listOf("/bin/sh", "-c", "exec ${OptionalGuestHook.path} supervise") else null
+        val hookStopArgv = if (hookEnabled) argv.dropLast(3) + listOf("/bin/sh", "-c", "exec ${OptionalGuestHook.path} stop") else null
         val builder = ProcessBuilder(argv).directory(context.filesDir)
         val env = builder.environment()
         env.clear()
@@ -207,6 +214,16 @@ class DshProcess(
             env.putAll(tawcPlan.environment)
         }
 
+        guestHookBuilder = hookArgv?.let { command -> ProcessBuilder(command).directory(context.filesDir).also { hook ->
+            hook.environment().clear()
+            hook.environment().putAll(env)
+            hook.redirectErrorStream(true)
+        } }
+        guestHookStopBuilder = hookStopArgv?.let { command -> ProcessBuilder(command).directory(context.filesDir).also { hook ->
+            hook.environment().clear()
+            hook.environment().putAll(env)
+            hook.redirectErrorStream(true)
+        } }
         readyReported = false
         if (directFallbackReason == DirectLaunch.INCOMPATIBLE) listener.onLog("[dsh-app] direct fallback: proot hard-link backing files need compatible launch; user preference and data retained", "system")
         if (directFallbackReason == DirectLaunch.FAILED) listener.onLog("[dsh-app] direct fallback: direct launch failed before with this runtime; turn Direct on again to retry", "system")
@@ -341,6 +358,16 @@ class DshProcess(
         val p = process ?: return
         stopper = thread(name = "dsh-stop", isDaemon = true) {
             try {
+                guestHook.stop { guestHookStopBuilder?.let { hook ->
+                    try {
+                        val child = hook.start()
+                        if (!child.waitFor(70, TimeUnit.SECONDS)) listener.onLog("[dsh-app] optional agent stop timed out", "system")
+                        else if (child.exitValue() != 0) listener.onLog("[dsh-app] optional agent stop failed (exit ${child.exitValue()})", "system")
+                    } catch (e: Exception) {
+                        listener.onLog("[dsh-app] optional agent stop failed (${e.javaClass.simpleName})", "system")
+                    }
+                }
+                }
                 val node = if (p.isAlive) guestRecord() else null
                 val proot = if (direct || tawc) null else node?.let { child -> processSnapshot().records.firstOrNull { it.pid == child.parent && it.proot } }
                 if (node != null) signalOwned(node, OsConstants.SIGTERM)
@@ -418,6 +445,23 @@ class DshProcess(
             while (System.currentTimeMillis() < deadline && !stopping && process?.isAlive == true) {
                 if (canConnect(port)) {
                     listener.onReady(this, base, token)
+                    synchronized(this) {
+                        val hook = guestHookBuilder
+                        if (hook != null && !stopping && process?.isAlive == true) {
+                            try {
+                                guestHook.start {
+                                    val child = hook.start()
+                                    thread(name = "optional-feishu-agent", isDaemon = true) {
+                                        child.inputStream.bufferedReader().useLines { lines -> lines.forEach { listener.onLog("[dsh-app] optional agent: $it", "system") } }
+                                        val code = child.waitFor()
+                                        if (code != 0 && !stopping) listener.onLog("[dsh-app] optional agent stopped (exit $code)", "system")
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                listener.onLog("[dsh-app] optional agent start failed (${e.javaClass.simpleName})", "system")
+                            }
+                        }
+                    }
                     return@thread
                 }
                 Thread.sleep(250)
